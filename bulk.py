@@ -45,7 +45,7 @@ class QWZModel(Model):
 
         for key in self.parameters:
             if key != "u":
-                print("Parameter", key, "provided, but is not used by the model.")
+                print("Parameter", key, "provided, but is not used by the QWZ model.")
 
 
     def hamiltonian(self, k):
@@ -53,6 +53,35 @@ class QWZModel(Model):
         assert k.shape == (self.dim,)
         d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.u])))
         return np.tensordot(d, pauli[1:, :, :], (0, 0))
+
+class BHZModel(Model):
+    name = "BHZ"
+    dim = 2
+    bands = 4
+
+    def __init__(self, **parameters):
+        super().__init__(**parameters)
+
+        if "u" not in self.parameters:
+            print("Required parameter u not found.")
+            self.u = 0
+        else:
+            self.u = float(self.parameters["u"])
+
+        if "SOC" in self.parameters:
+            self.C = self.parameters["SOC"]
+        else:
+            self.C = np.zeros(2)
+
+        for key in self.parameters:
+            if key not in ["u", "SOC"]:
+                print("Parameter", key, "provided, but is not used by the BHZ model.")
+
+    def hamiltonian(self, k):
+        k = np.asarray(k, dtype=np.float64).flatten()
+        assert k.shape == (self.dim,)
+        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.u])))
+        return np.kron(sigma[0], d[3] * sigma[3] + d[2] * sigma[2]) + np.kron(sigma[3], d[1] * sigma[1]) + np.kron(sigma[1], self.C)
 
 
 # A class for simulating results
