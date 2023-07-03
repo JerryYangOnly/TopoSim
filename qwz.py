@@ -105,16 +105,18 @@ class Simulator:
         if self.model.dim == 1:
             raise NotImplementedError
         elif self.model.dim == 2:
-            fig, ax = plt.subplots(projection="3d")
-            X, Y = np.meshgrid(self.mesh)
+            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+            X, Y = np.meshgrid(self.mesh, self.mesh)
             ax.plot_surface(X, Y, self.band[:, :, filled_bands - 1])
             ax.plot_surface(X, Y, self.band[:, :, filled_bands])
             del X, Y
-
+            
+            plt.show()
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
 for i in range(-3, 4):
     sim = Simulator(QWZModel(u=i), 20)
     print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+    sim.plot_band()
     del sim
