@@ -63,7 +63,7 @@ class Simulator:
 
     def set_mesh(self, mesh_points):
         self.mesh_points = mesh_points
-        self.mesh = np.linspace(-np.pi, np.pi, mesh_points, endpoint=False)
+        self.mesh = np.linspace(-np.pi, np.pi, mesh_points) #, endpoint=False)
         # self.meshX, self.meshY = np.meshgrid(np.linspace(-np.pi, np.pi, mesh_points, endpoint=False))
         self.evaluated = False
         self.band = np.zeros((*([mesh_points] * self.model.dim), self.model.bands))
@@ -115,8 +115,29 @@ class Simulator:
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
-for i in range(-3, 4):
-    sim = Simulator(QWZModel(u=i), 20)
-    print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
-    sim.plot_band()
+    def compute_chern(self, filled_bands=None):
+        if self.model.dim != 2:
+            print("Computation of Chern numbers is only supported in d=2.")
+        else:
+            if not self.evaluated:
+                self.populate_mesh()
+            Q = 0.0
+            for i in range(filled_bands if filled_bands else self.model.bands // 2):
+                F = np.sum(np.conj(self.states[:-1, :-1, :, i]) * self.states[1:, :-1, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[1:, 1:, :, i]) * self.states[:-1, 1:, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[:-1, 1:, :, i]) * self.states[:-1, :-1, :, i], axis=2)
+                F = -np.angle(F)
+                Q += np.sum(F) / 2.0 / np.pi
+            return Q
+
+chern = np.zeros(51)
+for i, u in zip(range(51), np.linspace(-3, 3, 51)):
+    sim = Simulator(QWZModel(u=u), 21)
+    # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+    # sim.plot_band()
+    # print(sim.compute_chern())
+    chern[i] = sim.compute_chern()
     del sim
+plt.plot(np.linspace(-3, 3, 51), chern, "o-")
+plt.show()
