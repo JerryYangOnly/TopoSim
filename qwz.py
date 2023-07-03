@@ -66,24 +66,55 @@ class Simulator:
         self.mesh = np.linspace(-np.pi, np.pi, mesh_points, endpoint=False)
         # self.meshX, self.meshY = np.meshgrid(np.linspace(-np.pi, np.pi, mesh_points, endpoint=False))
         self.evaluated = False
-        self.band = np.zeros((mesh_points, mesh_points, self.model.bands))
-        self.states = np.zeros((mesh_points, mesh_points, self.model.bands, self.model.bands), dtype=np.complex64)
+        self.band = np.zeros((*([mesh_points] * self.model.dim), self.model.bands))
+        self.states = np.zeros((*([mesh_points] * self.model.dim), self.model.bands, self.model.bands), dtype=np.complex64)
 
     def populate_mesh(self):
         if self.evaluated:
             return False
-        print("Starting evaluation")
-        for i in tqdm(range(mesh_points)):
-            for j in range(mesh_points):
-                w, v = scipy.linalg.eigh(self.model.hamiltonian(self.mesh[i], self.mesh[j]))
-                self.band[i, j, :] = w
-                self.states[i, j, :, :] = v
+        # print("Starting evaluation")
+        self.band = self.band.reshape(self.mesh_points**self.model.dim, self.model.bands)
+        self.states = self.states.reshape(self.mesh_points**self.model.dim, self.model.bands, self.model.bands)
+        for i in range(self.mesh_points**self.model.dim):
+            idx = [0] * self.model.dim
+            k = i
+            for j in range(self.model.dim - 1, -1, -1):
+                idx[j] = k % self.mesh_points
+                k //= self.mesh_points
+            w, v = scipy.linalg.eigh(self.model.hamiltonian([self.mesh[j] for j in idx]))
+            self.band[i, :] = w
+            self.states[i, :, :] = v
+        self.band = self.band.reshape((*([self.mesh_points] * self.model.dim), self.model.bands))
+        self.states = self.states.reshape((*([self.mesh_points] * self.model.dim), self.model.bands, self.model.bands))
         self.evaluated = True
         return True
 
     def direct_band_gap(self, filled_bands=None):
         if not self.evaluated:
-            return -1
+            self.populate_mesh()
         if not filled_bands:
             filled_bands = self.model.bands // 2    # Default to half-filling
         return np.min(self.band[:, :, filled_bands] - self.band[:, :, filled_bands - 1])
+
+    def plot_band(self, filled_bands=None):
+        if not self.evaluated:
+            self.populate_mesh()
+        if not filled_bands:
+            filled_bands = self.model.bands // 2    # Default to half-filling
+
+        if self.model.dim == 1:
+            raise NotImplementedError
+        elif self.model.dim == 2:
+            fig, ax = plt.subplots(projection="3d")
+            X, Y = np.meshgrid(self.mesh)
+            ax.plot_surface(X, Y, self.band[:, :, filled_bands - 1])
+            ax.plot_surface(X, Y, self.band[:, :, filled_bands])
+            del X, Y
+
+        else:
+            print("Band plotting of models in %d-D is not supported." % self.model.dim)
+
+for i in range(-3, 4):
+    sim = Simulator(QWZModel(u=i), 20)
+    print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+    del sim
