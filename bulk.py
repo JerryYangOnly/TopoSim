@@ -74,7 +74,7 @@ class BHZModel(Model):
         if "SOC" in self.parameters:
             self.C = self.parameters["SOC"]
         else:
-            self.C = np.zeros(2)
+            self.C = np.zeros((2, 2))
 
         for key in self.parameters:
             if key not in ["u", "SOC"]:
@@ -84,7 +84,7 @@ class BHZModel(Model):
         k = np.asarray(k, dtype=np.float64).flatten()
         assert k.shape == (self.dim,)
         d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.u])))
-        return np.kron(sigma[0], d[3] * sigma[3] + d[2] * sigma[2]) + np.kron(sigma[3], d[1] * sigma[1]) + np.kron(sigma[1], self.C)
+        return np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1]) + np.kron(pauli[1], self.C)
 
 
 # A class for simulating results
@@ -171,18 +171,23 @@ class Simulator:
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in d=2.")
             return
-
+        if not filled_bands:
+            filled_bands = self.model.bands // 2
         if not SOC:
             model_s1 = Model()
             model_s2 = Model()
             model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
             model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
-            sim_s1 = Simulation(model_s1, self.mesh_points)
-            sim_s2 = Simulation(model_s2, self.mesh_points)
+            model_s1.dim = self.model.dim
+            model_s2.dim = self.model.dim
+            model_s1.bands = self.model.bands // 2
+            model_s2.bands = self.model.bands // 2
+            sim_s1 = Simulator(model_s1, self.mesh_points)
+            sim_s2 = Simulator(model_s2, self.mesh_points)
             if filled_bands and filled_bands % 2 == 1:
                 print("Error: filled_bands cannot be odd in Z2 computation!")
                 return -1
-            v = ((sim_s1.compute_chern(filled_bands // 2 if filled_bands else None) - sim_s2.compute_chern(filled_bands // 2 if filled_bands else None)) // 2) % 2
+            v = ((sim_s1.compute_chern(filled_bands // 2) - sim_s2.compute_chern(filled_bands // 2)) // 2) % 2
             del model_s1, model_s2, sim_s1, sim_s2
             return v
         else:
@@ -204,7 +209,7 @@ class Simulator:
                 Q += np.sum(F)
 
             # Compute integral of Berry connection about edge of effective Brillouin zone
-            raise NotImplementedError
+            pass
 
     def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
@@ -243,4 +248,6 @@ plt.show()
 
 # for i in range(-3, 4):
 #     sim = Simulator(BHZModel(u=i), 21)
-#     print("u = %d, BG = %.2f: % (i, sim.direct_band_gap()))
+#     print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+#     print(sim.compute_z2())
+#     del sim
