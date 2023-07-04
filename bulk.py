@@ -170,23 +170,41 @@ class Simulator:
     def compute_z2(self, filled_bands=None, SOC=False):
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in d=2.")
-        else:
-            if not SOC:
-                model_s1 = Model()
-                model_s2 = Model()
-                model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
-                model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
-                sim_s1 = Simulation(model_s1, self.mesh_points)
-                sim_s2 = Simulation(model_s2, self.mesh_points)
-                if filled_bands and filled_bands % 2 == 1:
-                    print("Error: filled_bands cannot be odd in Z2 computation!")
-                    return -1
-                v = ((sim_s1.compute_chern(filled_bands // 2 if filled_bands else None) - sim_s2.compute_chern(filled_bands // 2 if filled_bands else None)) // 2) % 2
-                del model_s1, model_s2, sim_s1, sim_s2
-                return v
-            else:
-                raise NotImplementedError
+            return
 
+        if not SOC:
+            model_s1 = Model()
+            model_s2 = Model()
+            model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
+            model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
+            sim_s1 = Simulation(model_s1, self.mesh_points)
+            sim_s2 = Simulation(model_s2, self.mesh_points)
+            if filled_bands and filled_bands % 2 == 1:
+                print("Error: filled_bands cannot be odd in Z2 computation!")
+                return -1
+            v = ((sim_s1.compute_chern(filled_bands // 2 if filled_bands else None) - sim_s2.compute_chern(filled_bands // 2 if filled_bands else None)) // 2) % 2
+            del model_s1, model_s2, sim_s1, sim_s2
+            return v
+        else:
+            # Method of Fu and Kane
+            if self.mesh_points % 2 == 0:
+                self.set_mesh(self.mesh_points + 1)
+            if not self.evaluated:
+                self.populate_mesh()
+
+            # Compute Berry flux for half of the Brillouin zone
+            Q = 0.0
+            n = self.mesh_points // 2
+            for i in range(filled_bands):
+                F = np.sum(np.conj(self.states[n:-1, :-1, :, i]) * self.states[n + 1:, :-1, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[n + 1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[n + 1:, 1:, :, i]) * self.states[n:-1, 1:, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[n:-1, 1:, :, i]) * self.states[n:-1, :-1, :, i], axis=2)
+                F = -np.angle(F)
+                Q += np.sum(F)
+
+            # Compute integral of Berry connection about edge of effective Brillouin zone
+            raise NotImplementedError
 
     def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
@@ -197,7 +215,7 @@ class Simulator:
             if p == 0.0:
                 origin = v[:, :filled_bands]
             else:
-                P = sum([np.outer(v[i], np.conj(v[i])) for i in range(filled_bands)])
+                P = sum([np.outer(v[:, i], np.conj(v[:, i])) for i in range(filled_bands)])
                 W = P @ W
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
@@ -215,7 +233,7 @@ class Simulator:
 
 phases = np.zeros(100)
 for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
-    sim = Simulator(QWZModel(u=2.4), 21)
+    sim = Simulator(QWZModel(u=-1.5), 21)
     p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
     phases[i] = p[0]
 # print(phases)
