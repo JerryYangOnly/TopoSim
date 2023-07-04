@@ -25,6 +25,9 @@ class Model:
 
     def hamiltonian(self, k):
         raise NotImplementedError
+    
+    def get_parameters(self):
+        return self.parameters
 
 class QWZModel(Model):
     """Models the QWZ Hamiltonian H = d . sigma,
@@ -144,29 +147,82 @@ class Simulator:
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
+
     def compute_chern(self, filled_bands=None):
         if self.model.dim != 2:
             print("Computation of Chern numbers is only supported in d=2.")
         else:
             if not self.evaluated:
                 self.populate_mesh()
-            Q = 0.0
-            for i in range(filled_bands if filled_bands else self.model.bands // 2):
-                F = np.sum(np.conj(self.states[:-1, :-1, :, i]) * self.states[1:, :-1, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[1:, 1:, :, i]) * self.states[:-1, 1:, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[:-1, 1:, :, i]) * self.states[:-1, :-1, :, i], axis=2)
-                F = -np.angle(F)
-                Q += np.sum(F) / 2.0 / np.pi
-            return Q
+            return self._chern_hatsugai(filled_bands if filled_bands else self.model.bands // 2)
 
-chern = np.zeros(51)
-for i, u in zip(range(51), np.linspace(-3, 3, 51)):
-    sim = Simulator(QWZModel(u=u), 21)
-    # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
-    # sim.plot_band()
-    # print(sim.compute_chern())
-    chern[i] = sim.compute_chern()
-    del sim
-plt.plot(np.linspace(-3, 3, 51), chern, "o-")
+    def _chern_hatsugai(self, filled_bands):
+        Q = 0.0
+        for i in range(filled_bands):
+            F = np.sum(np.conj(self.states[:-1, :-1, :, i]) * self.states[1:, :-1, :, i], axis=2)
+            F *= np.sum(np.conj(self.states[1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
+            F *= np.sum(np.conj(self.states[1:, 1:, :, i]) * self.states[:-1, 1:, :, i], axis=2)
+            F *= np.sum(np.conj(self.states[:-1, 1:, :, i]) * self.states[:-1, :-1, :, i], axis=2)
+            F = -np.angle(F)
+            Q += np.sum(F) / 2.0 / np.pi
+        return Q
+
+    def compute_z2(self, filled_bands=None, SOC=False):
+        if self.model.dim != 2:
+            print("Computation of Z2 invariant is only supported in d=2.")
+        else:
+            if not SOC:
+                model_s1 = Model()
+                model_s2 = Model()
+                model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
+                model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
+                sim_s1 = Simulation(model_s1, self.mesh_points)
+                sim_s2 = Simulation(model_s2, self.mesh_points)
+                if filled_bands and filled_bands % 2 == 1:
+                    print("Error: filled_bands cannot be odd in Z2 computation!")
+                    return -1
+                v = ((sim_s1.compute_chern(filled_bands // 2 if filled_bands else None) - sim_s2.compute_chern(filled_bands // 2 if filled_bands else None)) // 2) % 2
+                del model_s1, model_s2, sim_s1, sim_s2
+                return v
+            else:
+                raise NotImplementedError
+
+
+    def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        W = np.eye(self.model.bands)
+        origin = None
+        for p in np.linspace(0, 1, points, endpoint=False):
+            w, v = scipy.linalg.eigh(self.model.hamiltonian(loop(p)))
+            if p == 0.0:
+                origin = v[:, :filled_bands]
+            else:
+                P = sum([np.outer(v[i], np.conj(v[i])) for i in range(filled_bands)])
+                W = P @ W
+        W = np.conj(origin).T @ W @ origin
+        return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
+
+# chern = np.zeros(51)
+# for i, u in zip(range(51), np.linspace(-3, 3, 51)):
+#     sim = Simulator(QWZModel(u=u), 21)
+#     # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+#     # sim.plot_band()
+#     # print(sim.compute_chern())
+#     chern[i] = sim.compute_chern()
+#     del sim
+# plt.plot(np.linspace(-3, 3, 51), chern, "o-")
+# plt.show()
+
+phases = np.zeros(100)
+for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
+    sim = Simulator(QWZModel(u=2.4), 21)
+    p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
+    phases[i] = p[0]
+# print(phases)
+plt.plot(np.linspace(-np.pi, np.pi, 100), phases)
+plt.ylim(-np.pi, np.pi)
 plt.show()
+
+# for i in range(-3, 4):
+#     sim = Simulator(BHZModel(u=i), 21)
+#     print("u = %d, BG = %.2f: % (i, sim.direct_band_gap()))
