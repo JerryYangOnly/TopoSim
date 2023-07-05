@@ -19,15 +19,44 @@ class Model:
     name = NotImplemented       # The name of the model
     dim = NotImplemented        # The dimension of the model
     bands = NotImplemented      # The number of bands of the model
+    defaults = {}               # The parameters of the model and default values
+    required = []               # The parameters required, the absence of which will produce a warning
 
     def __init__(self, **parameters):
         self.parameters = parameters
+
+        for key in self.parameters:
+            if key not in self.defaults:
+                print("Parameter", key, "was provided, but is not used by the", self.name, "model.")
+
+        for key in self.defaults:
+            if key not in self.parameters:
+                self.parameters[key] = self.defaults[key]
+                if key in self.required:
+                    print("Parameter", key, " is required by the", self.name, "model but is not provided.")
 
     def hamiltonian(self, k):
         raise NotImplementedError
     
     def get_parameters(self):
         return self.parameters
+
+
+class TwoBandModel(Model):
+    name = "Two Band"
+    dim = 2
+    bands = 2
+    defaults = {"d": lambda k: np.zeros(4)}
+    required = ["d"]
+
+    def __init__(self, **parameters):
+        super().__init__(**parameters)
+
+    def hamiltonian(self, k):
+        k = np.asarray(k, dtype=np.float64).flatten()
+        assert k.shape == (self.dim,)
+        return np.tensordot(self.parameters["d"](k), pauli[:, :, :], (0, 0))
+
 
 class QWZModel(Model):
     """Models the QWZ Hamiltonian H = d . sigma,
@@ -36,55 +65,34 @@ class QWZModel(Model):
     name = "QWZ"
     dim = 2
     bands = 2
+    defaults = {"u": 0.0}
+    required = ["u"]
 
     def __init__(self, **parameters):
         super().__init__(**parameters)
-        
-        if "u" not in self.parameters:
-            print("Required parameter u not found.")
-            self.u = 0
-        else:
-            self.u = float(self.parameters["u"])
-
-        for key in self.parameters:
-            if key != "u":
-                print("Parameter", key, "provided, but is not used by the QWZ model.")
-
 
     def hamiltonian(self, k):
         k = np.asarray(k, dtype=np.float64).flatten()
         assert k.shape == (self.dim,)
-        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.u])))
+        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
         return np.tensordot(d, pauli[1:, :, :], (0, 0))
+
 
 class BHZModel(Model):
     name = "BHZ"
     dim = 2
     bands = 4
+    defaults = {"u": 0.0, "SOC": np.zeros((2, 2))}
+    required = ["u"]
 
     def __init__(self, **parameters):
         super().__init__(**parameters)
 
-        if "u" not in self.parameters:
-            print("Required parameter u not found.")
-            self.u = 0
-        else:
-            self.u = float(self.parameters["u"])
-
-        if "SOC" in self.parameters:
-            self.C = self.parameters["SOC"]
-        else:
-            self.C = np.zeros((2, 2))
-
-        for key in self.parameters:
-            if key not in ["u", "SOC"]:
-                print("Parameter", key, "provided, but is not used by the BHZ model.")
-
     def hamiltonian(self, k):
         k = np.asarray(k, dtype=np.float64).flatten()
         assert k.shape == (self.dim,)
-        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.u])))
-        return np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1]) + np.kron(pauli[1], self.C)
+        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
+        return np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1]) + np.kron(pauli[1], self.parameters["SOC"])
 
 
 # A class for simulating results
@@ -120,6 +128,7 @@ class Simulator:
         self.states = self.states.reshape((*([self.mesh_points] * self.model.dim), self.model.bands, self.model.bands))
         self.evaluated = True
         return True
+
 
     def direct_band_gap(self, filled_bands=None):
         if not self.evaluated:
@@ -167,12 +176,28 @@ class Simulator:
             Q += np.sum(F) / 2.0 / np.pi
         return Q
 
+    def compute_skyrmion(self, S, filled_bands=None):
+        """S has shape (3, bands, bands).
+        """
+        if not self.evaluated:
+            self.populate_mesh()
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        expt = np.tensordot(S, np.conj(self.states[:, :, :, :filled_bands]) @ self.states[:, :, :, :filled_bands].transpose((0, 1, 3, 2)), ([1, 2], [2, 3]))
+        expt = np.vstack((np.zeros((1, self.mesh_points, self.mesh_points)), expt)).transpose((1, 2, 0))
+        
+        lat = lambda k: ((np.array(k) + np.pi) // (2 * np.pi / self.mesh_points)).astype(int)
+        model = TwoBandModel(d=lambda k: expt[tuple(lat(k))])
+        sim = Simulator(model, self.mesh_points)
+        return sim.compute_chern()
+
     def compute_z2(self, filled_bands=None, SOC=False):
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in d=2.")
             return
+
         if not filled_bands:
             filled_bands = self.model.bands // 2
+
         if not SOC:
             model_s1 = Model()
             model_s2 = Model()
@@ -187,7 +212,7 @@ class Simulator:
             if filled_bands and filled_bands % 2 == 1:
                 print("Error: filled_bands cannot be odd in Z2 computation!")
                 return -1
-            v = ((sim_s1.compute_chern(filled_bands // 2) - sim_s2.compute_chern(filled_bands // 2)) // 2) % 2
+            v = ((sim_s1.compute_chern(filled_bands // 2) - sim_s2.compute_chern(filled_bands // 2)) / 2) % 2
             del model_s1, model_s2, sim_s1, sim_s2
             return v
         else:
@@ -202,18 +227,32 @@ class Simulator:
             n = self.mesh_points // 2
             for i in range(filled_bands):
                 F = np.sum(np.conj(self.states[n:-1, :-1, :, i]) * self.states[n + 1:, :-1, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[n + 1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
+                F *= np.sum(np.conj(self.states[n + 1:, :-1, :, i]) * self.states[n + 1:, 1:, :, i], axis=2)
                 F *= np.sum(np.conj(self.states[n + 1:, 1:, :, i]) * self.states[n:-1, 1:, :, i], axis=2)
                 F *= np.sum(np.conj(self.states[n:-1, 1:, :, i]) * self.states[n:-1, :-1, :, i], axis=2)
                 F = -np.angle(F)
                 Q += np.sum(F)
 
             # Compute integral of Berry connection about edge of effective Brillouin zone
-            pass
+            def eff_bz_loop(x):
+                v = 6 * np.pi
+                if x <= 1 / 3:
+                    return (np.pi, -np.pi + v * x)
+                elif x <= 1 / 2:
+                    return (np.pi - v * (x - 1 / 3), np.pi)
+                elif x <= 5 / 6:
+                    return (0, np.pi - v * (x - 1 / 2))
+                else:
+                    return (v * (x - 5 / 6), -np.pi)
+            W = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
+            W = np.angle(scipy.linalg.det(W))
+            
+            return ((W - Q) / 2 / np.pi) % 2
+
 
     def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
-        W = np.eye(self.model.bands)
+        W = np.eye(self.model.bands, dtype=np.complex64)
         origin = None
         for p in np.linspace(0, 1, points, endpoint=False):
             w, v = scipy.linalg.eigh(self.model.hamiltonian(loop(p)))
@@ -225,29 +264,33 @@ class Simulator:
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
-# chern = np.zeros(51)
-# for i, u in zip(range(51), np.linspace(-3, 3, 51)):
-#     sim = Simulator(QWZModel(u=u), 21)
-#     # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
-#     # sim.plot_band()
-#     # print(sim.compute_chern())
-#     chern[i] = sim.compute_chern()
-#     del sim
-# plt.plot(np.linspace(-3, 3, 51), chern, "o-")
-# plt.show()
-
-phases = np.zeros(100)
-for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
-    sim = Simulator(QWZModel(u=-1.5), 21)
-    p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
-    phases[i] = p[0]
-# print(phases)
-plt.plot(np.linspace(-np.pi, np.pi, 100), phases)
-plt.ylim(-np.pi, np.pi)
+chern = np.zeros(51)
+for i, u in zip(range(51), np.linspace(-3, 3, 51)):
+    sim = Simulator(QWZModel(u=u), 21)
+    # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+    # sim.plot_band()
+    # print(sim.compute_chern())
+    chern[i] = sim.compute_skyrmion(pauli[1:])
+    del sim
+plt.plot(np.linspace(-3, 3, 51), chern, "o-")
 plt.show()
 
-# for i in range(-3, 4):
-#     sim = Simulator(BHZModel(u=i), 21)
-#     print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
-#     print(sim.compute_z2())
+# phases = np.zeros(100)
+# for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
+#     sim = Simulator(QWZModel(u=-1.5), 21)
+#     p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
+#     phases[i] = p[0]
+# # print(phases)
+# plt.plot(np.linspace(-np.pi, np.pi, 100), phases, "o-")
+# plt.ylim(-np.pi, np.pi)
+# plt.show()
+
+# z2 = np.zeros(50)
+# for i, u in zip(range(50), np.linspace(-3, 3, 50)):
+#     sim = Simulator(BHZModel(u=u), 21)
+#     # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
+#     z2[i] = sim.compute_z2(SOC=True)
+#     print("u = %.1f, Z2 = %.1f" % (u, z2[i]))
 #     del sim
+# plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
+# plt.show()
