@@ -1,99 +1,8 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
+from model import *
 from tqdm import tqdm
-
-# Define Pauli matrices for later use
-pauli = [0] * 4
-pauli[0] = np.eye(2)
-pauli[1] = np.array([[0, 1], [1, 0]])
-pauli[2] = np.array([[0, -1j], [1j, 0]])
-pauli[3] = np.array([[1, 0], [0, -1]])
-pauli = np.array(pauli)
-
-# Define free parameters
-u = 1.0
-
-# Define generic base class for models
-class Model:
-    name = NotImplemented       # The name of the model
-    dim = NotImplemented        # The dimension of the model
-    bands = NotImplemented      # The number of bands of the model
-    defaults = {}               # The parameters of the model and default values
-    required = []               # The parameters required, the absence of which will produce a warning
-
-    def __init__(self, **parameters):
-        self.parameters = parameters
-
-        for key in self.parameters:
-            if key not in self.defaults:
-                print("Parameter", key, "was provided, but is not used by the", self.name, "model.")
-
-        for key in self.defaults:
-            if key not in self.parameters:
-                self.parameters[key] = self.defaults[key]
-                if key in self.required:
-                    print("Parameter", key, " is required by the", self.name, "model but is not provided.")
-
-    def hamiltonian(self, k):
-        raise NotImplementedError
-    
-    def get_parameters(self):
-        return self.parameters
-
-
-class TwoBandModel(Model):
-    name = "Two Band"
-    dim = 2
-    bands = 2
-    defaults = {"d": lambda k: np.zeros(4)}
-    required = ["d"]
-
-    def __init__(self, **parameters):
-        super().__init__(**parameters)
-
-    def hamiltonian(self, k):
-        k = np.asarray(k, dtype=np.float64).flatten()
-        assert k.shape == (self.dim,)
-        return np.tensordot(self.parameters["d"](k), pauli[:, :, :], (0, 0))
-
-
-class QWZModel(Model):
-    """Models the QWZ Hamiltonian H = d . sigma,
-    where sigma are the Pauli matrices and d = (sin(kx), sin(ky), u + cos(kx) + cos(ky)).
-    """
-    name = "QWZ"
-    dim = 2
-    bands = 2
-    defaults = {"u": 0.0}
-    required = ["u"]
-
-    def __init__(self, **parameters):
-        super().__init__(**parameters)
-
-    def hamiltonian(self, k):
-        k = np.asarray(k, dtype=np.float64).flatten()
-        assert k.shape == (self.dim,)
-        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
-        return np.tensordot(d, pauli[1:, :, :], (0, 0))
-
-
-class BHZModel(Model):
-    name = "BHZ"
-    dim = 2
-    bands = 4
-    defaults = {"u": 0.0, "SOC": np.zeros((2, 2))}
-    required = ["u"]
-
-    def __init__(self, **parameters):
-        super().__init__(**parameters)
-
-    def hamiltonian(self, k):
-        k = np.asarray(k, dtype=np.float64).flatten()
-        assert k.shape == (self.dim,)
-        d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
-        return np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1]) + np.kron(pauli[1], self.parameters["SOC"])
-
 
 # A class for simulating results
 class Simulator:
@@ -137,7 +46,7 @@ class Simulator:
             filled_bands = self.model.bands // 2    # Default to half-filling
         return np.min(self.band[:, :, filled_bands] - self.band[:, :, filled_bands - 1])
 
-    def plot_band(self, filled_bands=None):
+    def plot_band(self, filled_bands=None, full=False):
         if not self.evaluated:
             self.populate_mesh()
         if not filled_bands:
@@ -148,8 +57,13 @@ class Simulator:
         elif self.model.dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
             X, Y = np.meshgrid(self.mesh, self.mesh)
-            ax.plot_surface(X, Y, self.band[:, :, filled_bands - 1])
-            ax.plot_surface(X, Y, self.band[:, :, filled_bands])
+
+            if not full:
+                ax.plot_surface(X, Y, self.band[:, :, filled_bands - 1])
+                ax.plot_surface(X, Y, self.band[:, :, filled_bands])
+            else:
+                for i in range(self.model.bands):
+                    ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
             
             plt.show()
@@ -264,16 +178,16 @@ class Simulator:
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
-chern = np.zeros(51)
-for i, u in zip(range(51), np.linspace(-3, 3, 51)):
-    sim = Simulator(QWZModel(u=u), 21)
-    # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
-    # sim.plot_band()
-    # print(sim.compute_chern())
-    chern[i] = sim.compute_skyrmion(pauli[1:])
-    del sim
-plt.plot(np.linspace(-3, 3, 51), chern, "o-")
-plt.show()
+# chern = np.zeros(51)
+# for i, u in zip(range(51), np.linspace(-3, 3, 51)):
+#     sim = Simulator(QWZModel(u=u), 21)
+#     # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
+#     # sim.plot_band()
+#     # print(sim.compute_chern())
+#     chern[i] = sim.compute_skyrmion(pauli[1:])
+#     del sim
+# plt.plot(np.linspace(-3, 3, 51), chern, "o-")
+# plt.show()
 
 # phases = np.zeros(100)
 # for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
@@ -285,12 +199,12 @@ plt.show()
 # plt.ylim(-np.pi, np.pi)
 # plt.show()
 
-# z2 = np.zeros(50)
-# for i, u in zip(range(50), np.linspace(-3, 3, 50)):
-#     sim = Simulator(BHZModel(u=u), 21)
-#     # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
-#     z2[i] = sim.compute_z2(SOC=True)
-#     print("u = %.1f, Z2 = %.1f" % (u, z2[i]))
-#     del sim
-# plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
-# plt.show()
+z2 = np.zeros(50)
+for i, u in zip(range(50), np.linspace(-3, 3, 50)):
+    sim = Simulator(BHZModel(u=u), 21)
+    # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
+    z2[i] = sim.compute_z2(SOC=True)
+    print("u = %.1f, Z2 = %.1f" % (u, z2[i]))
+    del sim
+plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
+plt.show()
