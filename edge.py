@@ -57,7 +57,7 @@ class EdgeSimulator(Simulator):
                 ax.plot(self.mesh, self.band[:, filled_bands])
             else:
                 for i in range(self.eff_bands):
-                    ax.plot(self.mesh, self.band[:, i])
+                    ax.plot(self.mesh, self.band[:, i], "k-")
             plt.show()
 
         elif self.eff_dim == 2:
@@ -76,8 +76,26 @@ class EdgeSimulator(Simulator):
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
+    def in_gap_states(self, n_states=3, fermi=0.0):
+        ids = np.argpartition(np.abs(self.band - fermi), n_states, axis=None)
+        ids = np.array(np.unravel_index(ids[:n_states], self.band.shape)).transpose()
+        return [self.states.__getitem__(idx[:-1])[:, idx[-1]] for idx in ids]
+
+    def pdf(self, states, sum_internal=False):
+        out = []
+        for state in states:
+            s = state.reshape(tuple(self.N[self.open_dim]) + (self.model.bands,), order='C')
+            s = np.abs(s)**2
+            # s /= np.sum(s)      # Normalization
+
+            if sum_internal:
+                s = np.sum(s, axis=len(self.open_dim))
+            out.append(s)
+        return out
+        
 
 for u in np.arange(-2.5, 2.6, 1):
-    sim = EdgeSimulator(QWZModel(u=u), 41)
+    sim = EdgeSimulator(BHZModel(u=u, SOC=0.1*pauli[2]), 41)
     sim.open((10, 0))
     sim.plot_band(full=True)
+    print(sim.pdf(sim.in_gap_states(), sum_internal=True))
