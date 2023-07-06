@@ -49,6 +49,7 @@ class Model:
             fft = lambda v: scipy.fft.fft(v, axis=0)
         else:
             fft = lambda v: scipy.fft.fft(v, axes=(0, 1))
+            # TODO: implement this using recursion
             raise NotImplementedError
         
         ks = np.tile(k, (N[open_dim[0]], 1))
@@ -61,6 +62,9 @@ class Model:
 
         for i in range(N[open_dim[0]]):
             hamil[i * self.bands:(i + 1) * self.bands] = np.roll(v, i * self.bands, axis=1)
+        
+        # Enforce open boundary conditions / no coupling between ends
+        hamil[:self.bands, -self.bands:] = hamil[-self.bands:, :self.bands] = np.zeros((self.bands, self.bands))
 
         return hamil
 
