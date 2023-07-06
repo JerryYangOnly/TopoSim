@@ -43,28 +43,34 @@ class Model:
         """
         open_dim = np.arange(len(N))[np.array(N) > 0]
         fft = None
+        hamiltonian = None
+        sz = 0
         if len(open_dim) == 0:
             return self.hamiltonian(k)
         elif len(open_dim) == 1:
             fft = lambda v: scipy.fft.fft(v, axis=0)
+            hamiltonian = self.hamiltonian
+            sz = self.bands
         else:
-            fft = lambda v: scipy.fft.fft(v, axes=(0, 1))
-            # TODO: implement this using recursion
-            raise NotImplementedError
+            fft = lambda v: scipy.fft.fftn(v, axis=tuple(range(len(open_dim))))
+            sN = np.array(N)
+            sN[open_dim[0]] = 0
+            hamiltonian = lambda k: self.open_hamiltonian(sN, k)
+            sz = np.prod(N[open_dim[1:]]) * self.bands
         
         ks = np.tile(k, (N[open_dim[0]], 1))
         ks[:, open_dim[0]] = np.linspace(0, 2 * np.pi, N[open_dim[0]], endpoint=False)
-        v = np.array([self.hamiltonian(k) for k in ks])
+        v = np.array([hamiltonian(k) for k in ks])
         v = fft(v)
         v = np.hstack(list(v))
 
-        hamil = np.zeros((np.prod(N[open_dim]) * self.bands, np.prod(N[open_dim]) * self.bands), dtype=np.complex64)
+        hamil = np.zeros((N[open_dim[0]] * sz, N[open_dim[0]] * sz), dtype=np.complex64)
 
         for i in range(N[open_dim[0]]):
-            hamil[i * self.bands:(i + 1) * self.bands] = np.roll(v, i * self.bands, axis=1)
+            hamil[i * sz:(i + 1) * sz] = np.roll(v, i * sz, axis=1)
         
         # Enforce open boundary conditions / no coupling between ends
-        hamil[:self.bands, -self.bands:] = hamil[-self.bands:, :self.bands] = np.zeros((self.bands, self.bands))
+        hamil[:sz, -sz:] = hamil[-sz:, :sz] = np.zeros((sz, sz))
 
         return hamil
 
