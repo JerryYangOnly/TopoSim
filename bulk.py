@@ -53,7 +53,15 @@ class Simulator:
             filled_bands = self.model.bands // 2    # Default to half-filling
 
         if self.model.dim == 1:
-            raise NotImplementedError
+            fig, ax = plt.subplots()
+            if not full:
+                ax.plot(self.mesh, self.band[:, filled_bands - 1])
+                ax.plot(self.mesh, self.band[:, filled_bands])
+            else:
+                for i in range(self.model.bands):
+                    ax.plot(self.mesh, self.band[:, i])
+            plt.show()
+
         elif self.model.dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
             X, Y = np.meshgrid(self.mesh, self.mesh)
@@ -65,8 +73,8 @@ class Simulator:
                 for i in range(self.model.bands):
                     ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
-            
             plt.show()
+
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
@@ -81,13 +89,12 @@ class Simulator:
 
     def _chern_hatsugai(self, filled_bands):
         Q = 0.0
-        for i in range(filled_bands):
-            F = np.sum(np.conj(self.states[:-1, :-1, :, i]) * self.states[1:, :-1, :, i], axis=2)
-            F *= np.sum(np.conj(self.states[1:, :-1, :, i]) * self.states[1:, 1:, :, i], axis=2)
-            F *= np.sum(np.conj(self.states[1:, 1:, :, i]) * self.states[:-1, 1:, :, i], axis=2)
-            F *= np.sum(np.conj(self.states[:-1, 1:, :, i]) * self.states[:-1, :-1, :, i], axis=2)
-            F = -np.angle(F)
-            Q += np.sum(F) / 2.0 / np.pi
+        F = np.conj(self.states[:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, :-1, :, :filled_bands]
+        F = F @ (np.conj(self.states[1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, 1:, :, :filled_bands])
+        F = F @ (np.conj(self.states[1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, 1:, :, :filled_bands])
+        F = F @ (np.conj(self.states[:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, :-1, :, :filled_bands])
+        F = -np.angle(np.linalg.det(F))
+        Q = np.sum(F) / 2.0 / np.pi
         return Q
 
     def compute_skyrmion(self, S, filled_bands=None):
@@ -139,13 +146,12 @@ class Simulator:
             # Compute Berry flux for half of the Brillouin zone
             Q = 0.0
             n = self.mesh_points // 2
-            for i in range(filled_bands):
-                F = np.sum(np.conj(self.states[n:-1, :-1, :, i]) * self.states[n + 1:, :-1, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[n + 1:, :-1, :, i]) * self.states[n + 1:, 1:, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[n + 1:, 1:, :, i]) * self.states[n:-1, 1:, :, i], axis=2)
-                F *= np.sum(np.conj(self.states[n:-1, 1:, :, i]) * self.states[n:-1, :-1, :, i], axis=2)
-                F = -np.angle(F)
-                Q += np.sum(F)
+            F = np.conj(self.states[n:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, :-1, :, :filled_bands]
+            F = F @ (np.conj(self.states[n + 1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, 1:, :, :filled_bands])
+            F = F @ (np.conj(self.states[n + 1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, 1:, :, :filled_bands])
+            F = F @ (np.conj(self.states[n:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, :-1, :, :filled_bands])
+            F = -np.angle(np.linalg.det(F))
+            Q = np.sum(F)
 
             # Compute integral of Berry connection about edge of effective Brillouin zone
             def eff_bz_loop(x):
@@ -179,32 +185,43 @@ class Simulator:
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
 # chern = np.zeros(51)
+# skyr = np.zeros(51)
 # for i, u in zip(range(51), np.linspace(-3, 3, 51)):
-#     sim = Simulator(QWZModel(u=u), 21)
+#     sim = Simulator(FourBandModel(b=1.0, k=u), 21)
 #     # print("u = %d, BG = %.2f" % (i, sim.direct_band_gap()))
 #     # sim.plot_band()
 #     # print(sim.compute_chern())
-#     chern[i] = sim.compute_skyrmion(pauli[1:])
+#     chern[i] = sim.compute_chern()
+#     skyr[i] = sim.compute_skyrmion((np.kron(pauli[3], pauli[1]), np.kron(pauli[0], pauli[2]), np.kron(pauli[3], pauli[3])))
 #     del sim
 # plt.plot(np.linspace(-3, 3, 51), chern, "o-")
+# plt.title("Chern number of four band model")
+# plt.xlabel("k")
+# plt.ylabel("C")
+# plt.show()
+# plt.plot(np.linspace(-3, 3, 51), skyr, "o-")
+# plt.title("Skyrmion number of four band model")
+# plt.xlabel("u")
+# plt.ylabel("Q")
 # plt.show()
 
-# phases = np.zeros(100)
+# phases = np.zeros((2, 100))
 # for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
-#     sim = Simulator(QWZModel(u=-1.5), 21)
+#     sim = Simulator(BHZModel(u=0.6), 21)
 #     p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
-#     phases[i] = p[0]
+#     phases[:, i] = p
 # # print(phases)
-# plt.plot(np.linspace(-np.pi, np.pi, 100), phases, "o-")
+# plt.plot(np.linspace(-np.pi, np.pi, 100), phases[0], "o-")
+# plt.plot(np.linspace(-np.pi, np.pi, 100), phases[1], "o-")
 # plt.ylim(-np.pi, np.pi)
 # plt.show()
 
-z2 = np.zeros(50)
-for i, u in zip(range(50), np.linspace(-3, 3, 50)):
-    sim = Simulator(BHZModel(u=u), 21)
-    # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
-    z2[i] = sim.compute_z2(SOC=True)
-    print("u = %.1f, Z2 = %.1f" % (u, z2[i]))
-    del sim
-plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
-plt.show()
+# z2 = np.zeros(50)
+# for i, u in zip(range(50), np.linspace(-3, 3, 50)):
+#     sim = Simulator(BHZModel(u=u), 21)
+#     # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
+#     z2[i] = sim.compute_z2(SOC=True)
+#     print("u = %.1f, Z2 = %.3f" % (u, z2[i]))
+#     del sim
+# plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
+# plt.show()

@@ -58,7 +58,7 @@ class Model:
         v = fft(v)
         v = np.hstack(list(v))
 
-        hamil = np.zeros((np.prod(N) * self.bands, np.prod(N) * self.bands))
+        hamil = np.zeros((np.prod(N[open_dim]) * self.bands, np.prod(N[open_dim]) * self.bands), dtype=np.complex64)
 
         for i in range(N[open_dim[0]]):
             hamil[i * self.bands:(i + 1) * self.bands] = np.roll(v, i * self.bands, axis=1)
@@ -118,5 +118,22 @@ class BHZModel(Model):
         k = np.asarray(k, dtype=np.float64).flatten()
         assert k.shape == (self.dim,)
         d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
-        return np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1]) + np.kron(pauli[1], self.parameters["SOC"])
+        hamil = np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1])
+        hamil[-self.bands // 2:, :self.bands // 2] = self.parameters["SOC"]
+        hamil[:self.bands // 2, -self.bands // 2:] = np.conj(self.parameters["SOC"]).T
+        return hamil
 
+class FourBandModel(Model):
+    dim = 2
+    bands = 4
+    defaults = {"b": 1.0, "k": 1.0}
+    required = ["b", "k"]
+
+    def __init__(self, **parameters):
+        super().__init__(**parameters)
+
+    def hamiltonian(self, k):
+        k = np.asarray(k, dtype=np.float64).flatten()
+        assert k.shape == (self.dim,)
+        return np.kron(pauli[3], (1 - np.sum(np.cos(k))) * pauli[3] + self.parameters["k"] * np.sin(k[1]) * pauli[1]) + np.kron(pauli[0], self.parameters["b"] * np.sin(k[0]) * pauli[2])
+        
