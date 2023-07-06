@@ -137,37 +137,49 @@ class Simulator:
             del model_s1, model_s2, sim_s1, sim_s2
             return v
         else:
-            # Method of Fu and Kane
-            if self.mesh_points % 2 == 0:
-                self.set_mesh(self.mesh_points + 1)
-            if not self.evaluated:
-                self.populate_mesh()
+            # return self._z2_fu_kane(filled_bands)
+            return self._z2_wcc(filled_bands)
 
-            # Compute Berry flux for half of the Brillouin zone
-            Q = 0.0
-            n = self.mesh_points // 2
-            F = np.conj(self.states[n:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, :-1, :, :filled_bands]
-            F = F @ (np.conj(self.states[n + 1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, 1:, :, :filled_bands])
-            F = F @ (np.conj(self.states[n + 1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, 1:, :, :filled_bands])
-            F = F @ (np.conj(self.states[n:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, :-1, :, :filled_bands])
-            F = -np.angle(np.linalg.det(F))
-            Q = np.sum(F)
+    def _z2_fu_kane(self, filled_bands):
+        # Method of Fu and Kane
+        if self.mesh_points % 2 == 0:
+            self.set_mesh(self.mesh_points + 1)
+        if not self.evaluated:
+            self.populate_mesh()
 
-            # Compute integral of Berry connection about edge of effective Brillouin zone
-            def eff_bz_loop(x):
-                v = 6 * np.pi
-                if x <= 1 / 3:
-                    return (np.pi, -np.pi + v * x)
-                elif x <= 1 / 2:
-                    return (np.pi - v * (x - 1 / 3), np.pi)
-                elif x <= 5 / 6:
-                    return (0, np.pi - v * (x - 1 / 2))
-                else:
-                    return (v * (x - 5 / 6), -np.pi)
-            W = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
-            W = np.angle(scipy.linalg.det(W))
-            
-            return ((W - Q) / 2 / np.pi) % 2
+        # Compute Berry flux for half of the Brillouin zone
+        Q = 0.0
+        n = self.mesh_points // 2
+        F = np.conj(self.states[n:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, :-1, :, :filled_bands]
+        F = F @ (np.conj(self.states[n + 1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, 1:, :, :filled_bands])
+        F = F @ (np.conj(self.states[n + 1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, 1:, :, :filled_bands])
+        F = F @ (np.conj(self.states[n:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, :-1, :, :filled_bands])
+        F = -np.angle(np.linalg.det(F))
+        Q = np.sum(F)
+
+        # Compute integral of Berry connection about edge of effective Brillouin zone
+        def eff_bz_loop(x):
+            v = 6 * np.pi
+            if x <= 1 / 3:
+                return (np.pi, -np.pi + v * x)
+            elif x <= 1 / 2:
+                return (np.pi - v * (x - 1 / 3), np.pi)
+            elif x <= 5 / 6:
+                return (0, np.pi - v * (x - 1 / 2))
+            else:
+                return (v * (x - 5 / 6), -np.pi)
+        W = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
+        print(np.angle(W))
+        W = np.angle(scipy.linalg.det(W))
+        
+        return ((W - Q) / 2 / np.pi) % 2
+
+    def _z2_wcc(self, filled_bands):
+        phases_0 = self.wilson_loop(lambda x: (2 * np.pi * (x - 1/2), 0.001), filled_bands=filled_bands, phases=True)
+        phases_pi = self.wilson_loop(lambda x: (2 * np.pi * (x - 1/2), np.pi - 0.001), filled_bands=filled_bands, phases=True)
+        theta = np.random.rand() * 2 * np.pi - np.pi
+
+        return (sum(phases_0 < theta) - sum(phases_pi < theta)) % 2
 
 
     def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
@@ -182,7 +194,7 @@ class Simulator:
                 P = sum([np.outer(v[:, i], np.conj(v[:, i])) for i in range(filled_bands)])
                 W = P @ W
         W = np.conj(origin).T @ W @ origin
-        return W if not phases else np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
+        return W if not phases else np.sort(np.angle(scipy.linalg.eig(W)[0]))# np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
 # chern = np.zeros(51)
 # skyr = np.zeros(51)
@@ -205,23 +217,20 @@ class Simulator:
 # plt.ylabel("Q")
 # plt.show()
 
-# phases = np.zeros((2, 100))
-# for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
-#     sim = Simulator(BHZModel(u=0.6), 21)
-#     p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
-#     phases[:, i] = p
-# # print(phases)
-# plt.plot(np.linspace(-np.pi, np.pi, 100), phases[0], "o-")
-# plt.plot(np.linspace(-np.pi, np.pi, 100), phases[1], "o-")
-# plt.ylim(-np.pi, np.pi)
-# plt.show()
-
-# z2 = np.zeros(50)
-# for i, u in zip(range(50), np.linspace(-3, 3, 50)):
-#     sim = Simulator(BHZModel(u=u), 21)
-#     # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
-#     z2[i] = sim.compute_z2(SOC=True)
-#     print("u = %.1f, Z2 = %.3f" % (u, z2[i]))
-#     del sim
-# plt.plot(np.linspace(-3, 3, 50), np.round(z2) % 2)
-# plt.show()
+z2 = np.zeros(30)
+for i, u in zip(range(30), np.linspace(-3, 3, 30)):
+    sim = Simulator(BHZModel(u=u), 21)
+    # print("u = %.2f, BG = %.2f" % (i, sim.direct_band_gap()))
+    z2[i] = sim.compute_z2(SOC=True)
+    print("u = %.2f, Z2 = %.3f" % (u, z2[i]))
+    # phases = np.zeros((2, 100))
+    # for i, ky in zip(range(100), np.linspace(-np.pi, np.pi, 100)):
+    #     p = sim.wilson_loop(lambda x: (2*np.pi*(x - 1/2), ky), phases=True)
+    #     phases[:, i] = p
+    # plt.plot(phases[0], np.linspace(-np.pi, np.pi, 100), "k-")
+    # plt.plot(phases[1], np.linspace(-np.pi, np.pi, 100), "k-")
+    # plt.xlim(-np.pi, np.pi)
+    # plt.show()
+    del sim
+plt.plot(np.linspace(-3, 3, 30), np.round(z2) % 2)
+plt.show()
