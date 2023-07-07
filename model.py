@@ -61,7 +61,7 @@ class Model:
         ks = np.tile(k, (N[open_dim[0]], 1))
         ks[:, open_dim[0]] = np.linspace(0, 2 * np.pi, N[open_dim[0]], endpoint=False)
         v = np.array([hamiltonian(k) for k in ks])
-        v = fft(v)
+        v = fft(v) / N[open_dim[0]]
         v = np.hstack(list(v))
 
         hamil = np.zeros((N[open_dim[0]] * sz, N[open_dim[0]] * sz), dtype=np.complex64)
