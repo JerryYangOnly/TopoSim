@@ -93,16 +93,3 @@ class EdgeSimulator(Simulator):
             out.append(s)
         return out
         
-
-for u in np.arange(-2.5, 2.6, 1):
-    sim = EdgeSimulator(BHZModel(u=u, SOC=0.1*pauli[2]), 41)
-    sim.open((10, 0))
-    sim.plot_band(full=True)
-    states = sim.in_gap_states(n_states=1)
-    print(sim.pdf(states, sum_internal=True))
-    # if u == -1.5:
-    #     print(states)
-    #     print(sim.states[[20]][:, 19])
-    #     state = sim.states[20, :, 19]
-    #     print(state)
-    #     print((sim.model.open_hamiltonian(sim.N, (0.0, 0.0)) @ state.flatten()) / state.flatten())
