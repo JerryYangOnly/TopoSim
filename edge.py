@@ -44,32 +44,25 @@ class EdgeSimulator(Simulator):
         self.states = self.states.reshape((*([self.mesh_points] * self.eff_dim), self.eff_bands, self.eff_bands))
         self.evaluated = True
 
-    def plot_band(self, filled_bands=None, full=False):
+    def plot_band(self, band_hl=()):
         if not self.evaluated:
             self.populate_mesh()
-        if not filled_bands:
-            filled_bands = self.eff_bands // 2    # Default to half-filling
 
         if self.eff_dim == 1:
             fig, ax = plt.subplots()
-            if not full:
-                ax.plot(self.mesh, self.band[:, filled_bands - 1])
-                ax.plot(self.mesh, self.band[:, filled_bands])
-            else:
-                for i in range(self.eff_bands):
+            for i in range(self.eff_bands):
+                if i not in band_hl:
                     ax.plot(self.mesh, self.band[:, i], "k-")
+                else:
+                    ax.plot(self.mesh, self.band[:, i])
             plt.show()
 
         elif self.eff_dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
             X, Y = np.meshgrid(self.mesh, self.mesh)
 
-            if not full:
-                ax.plot_surface(X, Y, self.band[:, :, filled_bands - 1])
-                ax.plot_surface(X, Y, self.band[:, :, filled_bands])
-            else:
-                for i in range(self.eff_bands):
-                    ax.plot_surface(X, Y, self.band[:, :, i])
+            for i in range(self.eff_bands):
+                ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
             plt.show()
 
@@ -81,15 +74,37 @@ class EdgeSimulator(Simulator):
         ids = np.array(np.unravel_index(ids[:n_states], self.band.shape)).transpose()
         return [self.states.__getitem__(*idx[:-1])[:, idx[-1]] for idx in ids]
 
-    def pdf(self, states, sum_internal=False):
-        out = []
-        for state in states:
-            s = state.reshape(tuple(self.N[self.open_dim]) + (self.model.bands,), order='C')
-            s = np.abs(s)**2
-            # s /= np.sum(s)      # Normalization
+    def pdf(self, state, sum_internal=True):
+        s = state.reshape(tuple(self.N[self.open_dim]) + (self.model.bands,), order='C')
+        s = np.abs(s)**2
+        # s /= np.sum(s)      # Normalization
 
-            if sum_internal:
-                s = np.sum(s, axis=len(self.open_dim))
-            out.append(s)
-        return out
+        if sum_internal:
+            s = np.sum(s, axis=len(self.open_dim))
+        return s
+
+
+    def pdfs(self, states, sum_internal=True):
+        return [self.pdf(state, sum_internal=sum_internal) for state in states]
         
+    def position_heat_map_band(self, band):
+        if self.eff_dim != 1 or len(self.open_dim) != 1:
+            print("Dimension of the model is not supported. Are boundaries opened correctly?")
+            return
+        if not self.evaluated:
+            self.populate_mesh()
+        
+        fig = plt.figure()
+        # ax = fig.gca(projection="3d")
+        ax = fig.gca()
+
+        pdfs = np.array(self.pdfs(self.states[:, :, band]))
+        X, Y = np.meshgrid(self.mesh, np.arange(np.prod(self.N[self.open_dim])), indexing='ij')
+
+        # ax.plot_surface(X, Y, pdfs)
+        ax.imshow(pdfs.transpose(), aspect=2 * np.pi / np.prod(self.N[self.open_dim]), extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])))
+        ax.set_xlabel("Momentum")
+        ax.set_ylabel("Site")
+        # ax.set_zlim(0, 1)
+
+        plt.show()

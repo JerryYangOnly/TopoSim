@@ -14,7 +14,7 @@ from edge import EdgeSimulator
 #     # sim.plot_band()
 #     # print(sim.compute_chern())
 #     chern[i] = sim.compute_chern()
-#     skyr[i] = sim.compute_skyrmion((np.kron(pauli[3], pauli[1]), np.kron(pauli[0], pauli[2]), np.kron(pauli[3], pauli[3])))
+#     skyr[i] = sim.compute_skyrmion()
 #     del sim
 # plt.plot(np.linspace(-3, 3, 51), chern, "o-")
 # plt.title("Chern number of four band model")
@@ -26,6 +26,12 @@ from edge import EdgeSimulator
 # plt.xlabel("u")
 # plt.ylabel("Q")
 # plt.show()
+
+# sim = Simulator(FourBandModel(b=1.0, k=1.0), 21)
+# sim.set_spin_op((np.kron(pauli[3], pauli[1]), np.kron(pauli[0], pauli[2]), np.kron(pauli[3], pauli[3])))
+# sim.plot_spin_texture()
+# print(sim.compute_skyrmion())
+# print(sim.normalized_spin())
 
 # z2 = np.zeros(30)
 # for i, u in zip(range(30), np.linspace(-3, 3, 30)):
@@ -45,11 +51,13 @@ from edge import EdgeSimulator
 # plt.plot(np.linspace(-3, 3, 30), np.round(z2) % 2)
 # plt.show()
 
-for u in np.arange(-2.5, 2.6, 1):
-    sim = EdgeSimulator(BHZModel(u=u, SOC=0.1*pauli[2]), 41)
-    sim.open((10, 0))
-    sim.plot_band(full=True)
-    states = sim.pdf(sim.in_gap_states(), sum_internal=True)
-    for state in states:
-        plt.bar(np.arange(10), state)
-        plt.show()
+for u in np.arange(-1.5, -1.4, 1):
+    sim = EdgeSimulator(BHZModel(u=u, SOC=0.0*pauli[2]), 41)
+    sim.open((20, 0))
+    sim.plot_band((39, 41))
+    sim.position_heat_map_band(39)
+    sim.position_heat_map_band(41)
+    # states = sim.pdf(sim.in_gap_states(n_states=2), sum_internal=True)
+    # for state in states:
+    #     plt.bar(np.arange(20), state)
+    #     plt.show()
