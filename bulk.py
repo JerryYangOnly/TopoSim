@@ -82,7 +82,7 @@ class Simulator:
 
     def compute_chern(self, filled_bands=None):
         if self.model.dim != 2:
-            print("Computation of Chern numbers is only supported in d=2.")
+            print("Computation of Chern numbers is only supported in 2-D.")
         else:
             if not self.evaluated:
                 self.populate_mesh()
@@ -100,7 +100,7 @@ class Simulator:
 
     def compute_z2(self, filled_bands=None, SOC=True):
         if self.model.dim != 2:
-            print("Computation of Z2 invariant is only supported in d=2.")
+            print("Computation of Z2 invariant is only supported in 2-D.")
             return
 
         if not filled_bands:
@@ -185,7 +185,7 @@ class Simulator:
     def set_spin_op(self, S):
         self.S = S
         self.spin_evaluated = 0
-        self.spin = np.zeros((self.mesh_points, self.mesh_points, 3))
+        self.spin = np.zeros((*([self.mesh_points] * self.model.dim), 3))
 
     def populate_spin(self, filled_bands=None):
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
@@ -193,7 +193,7 @@ class Simulator:
             return
         if not self.evaluated:
             self.populate_mesh()
-        self.spin = np.tensordot(self.S, np.conj(self.states[:, :, :, :filled_bands]) @ self.states[:, :, :, :filled_bands].transpose((0, 1, 3, 2)), ([1, 2], [2, 3])).transpose((1, 2, 0)).real
+        self.spin = np.tensordot(self.S, np.conj(self.states[..., :filled_bands]) @ np.swapaxes(self.states[..., :filled_bands], -1, -2), ([1, self.model.dim], [2, self.model.dim + 1])).transpose((1, 2, 0)).real
         self.spin_evaluted = filled_bands
 
     def normalized_spin(self):
@@ -205,7 +205,10 @@ class Simulator:
         """S has shape (3, bands, bands).
         """
         if self.S is None:
-            return 0
+            return
+        if self.model.dim != 2:
+            print("Computation of skyrmion number is only supported in 2-D.")
+            return
         self.populate_spin(filled_bands)
 
         # Normalize the spin for the computation
@@ -217,6 +220,9 @@ class Simulator:
         return sim.compute_chern()
 
     def compute_skyrmion_z2(self, Ss, filled_bands=None, SOC=True):
+        if self.model.dim != 2:
+            print("Computation of skyrmion Z2 invariant is only supported in 2-D.")
+            return
         if not SOC:
             if filled_bands and filled_bands % 2 == 1:
                 print("Error: filled_bands cannot be odd in Z2 computation!")
