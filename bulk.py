@@ -9,6 +9,7 @@ class Simulator:
     def __init__(self, model: Model, mesh_points: int):
         self.model = model
         self.set_mesh(mesh_points)
+        self.set_spin_op(None)
 
     def set_mesh(self, mesh_points):
         self.mesh_points = mesh_points
@@ -97,20 +98,6 @@ class Simulator:
         Q = np.sum(F) / 2.0 / np.pi
         return Q
 
-    def compute_skyrmion(self, S, filled_bands=None):
-        """S has shape (3, bands, bands).
-        """
-        if not self.evaluated:
-            self.populate_mesh()
-        filled_bands = filled_bands if filled_bands else self.model.bands // 2
-        expt = np.tensordot(S, np.conj(self.states[:, :, :, :filled_bands]) @ self.states[:, :, :, :filled_bands].transpose((0, 1, 3, 2)), ([1, 2], [2, 3]))
-        expt = np.vstack((np.zeros((1, self.mesh_points, self.mesh_points)), expt)).transpose((1, 2, 0))
-        
-        lat = lambda k: ((np.array(k) + np.pi) // (2 * np.pi / self.mesh_points)).astype(int)
-        model = TwoBandModel(d=lambda k: expt[tuple(lat(k))])
-        sim = Simulator(model, self.mesh_points)
-        return sim.compute_chern()
-
     def compute_z2(self, filled_bands=None, SOC=False):
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in d=2.")
@@ -195,3 +182,54 @@ class Simulator:
                 W = P @ W
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(W)[0]))# np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
+
+    
+    def set_spin_op(self, S):
+        self.S = S
+        self.spin_evaluated = 0
+        self.spin = np.zeros((self.mesh_points, self.mesh_points, 3))
+
+    def populate_spin(self, filled_bands=None):
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        if (self.spin_evaluated and self.spin_evaluated == filled_bands) or self.S is None:
+            return
+        if not self.evaluated:
+            self.populate_mesh()
+        self.spin = np.tensordot(self.S, np.conj(self.states[:, :, :, :filled_bands]) @ self.states[:, :, :, :filled_bands].transpose((0, 1, 3, 2)), ([1, 2], [2, 3])).transpose((1, 2, 0)).real
+        self.spin_evaluted = filled_bands
+
+    def normalized_spin(self):
+        s = np.sqrt(np.sum(self.spin**2, axis=2).reshape((self.mesh_points, self.mesh_points, 1)))
+        s[s == 0] = np.finfo(np.float32).eps
+        return self.spin / s
+
+    def compute_skyrmion(self, filled_bands=None):
+        """S has shape (3, bands, bands).
+        """
+        if self.S is None:
+            return 0
+        self.populate_spin(filled_bands)
+
+        # Normalize the spin for the computation
+        expt = np.concatenate((np.zeros((self.mesh_points, self.mesh_points, 1)), self.normalized_spin()), axis=2)
+        
+        lat = lambda k: ((np.array(k) + np.pi) // (2 * np.pi / self.mesh_points)).astype(int)
+        model = TwoBandModel(d=lambda k: expt[tuple(lat(k))])
+        sim = Simulator(model, self.mesh_points)
+        return sim.compute_chern()
+
+    def plot_spin_texture(self, filled_bands=None, normalize=True):
+        if self.model.dim != 2:
+            print("Spin texture plotting is only supported in 2-D.")
+            return
+
+        self.populate_spin(filled_bands)
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        kx, ky, kz = np.meshgrid(self.mesh, self.mesh, np.zeros(1))
+
+        s = self.spin if not normalize else self.normalized_spin()
+        ax.quiver(kx, ky, kz, s[:, :, 0:1], s[:, :, 1:2], s[:, :, 2:3], length=2 * np.pi / self.mesh_points, arrow_length_ratio=0.2)
+        ax.set_zlim(-np.pi, np.pi)
+        plt.show()
