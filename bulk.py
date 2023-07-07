@@ -98,7 +98,7 @@ class Simulator:
         Q = np.sum(F) / 2.0 / np.pi
         return Q
 
-    def compute_z2(self, filled_bands=None, SOC=False):
+    def compute_z2(self, filled_bands=None, SOC=True):
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in d=2.")
             return
@@ -107,19 +107,17 @@ class Simulator:
             filled_bands = self.model.bands // 2
 
         if not SOC:
+            if filled_bands and filled_bands % 2 == 1:
+                print("Error: filled_bands cannot be odd in Z2 computation!")
+                return -1
             model_s1 = Model()
             model_s2 = Model()
             model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
             model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
-            model_s1.dim = self.model.dim
-            model_s2.dim = self.model.dim
-            model_s1.bands = self.model.bands // 2
-            model_s2.bands = self.model.bands // 2
+            model_s1.dim = model_s2.dim = self.model.dim
+            model_s1.bands = model_s2.bands = self.model.bands // 2
             sim_s1 = Simulator(model_s1, self.mesh_points)
             sim_s2 = Simulator(model_s2, self.mesh_points)
-            if filled_bands and filled_bands % 2 == 1:
-                print("Error: filled_bands cannot be odd in Z2 computation!")
-                return -1
             v = ((sim_s1.compute_chern(filled_bands // 2) - sim_s2.compute_chern(filled_bands // 2)) / 2) % 2
             del model_s1, model_s2, sim_s1, sim_s2
             return v
@@ -218,6 +216,27 @@ class Simulator:
         sim = Simulator(model, self.mesh_points)
         return sim.compute_chern()
 
+    def compute_skyrmion_z2(self, Ss, filled_bands=None, SOC=True):
+        if not SOC:
+            if filled_bands and filled_bands % 2 == 1:
+                print("Error: filled_bands cannot be odd in Z2 computation!")
+                return -1
+            model_s1 = Model()
+            model_s2 = Model()
+            model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
+            model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
+            model_s1.dim = model_s2.dim = self.model.dim
+            model_s1.bands = model_s2.bands = self.model.bands // 2
+            sim_s1 = Simulator(model_s1, self.mesh_points)
+            sim_s2 = Simulator(model_s2, self.mesh_points)
+            sim_s1.set_spin_op(Ss)
+            sim_s2.set_spin_op(Ss)
+            v = ((sim_s1.compute_skyrmion(filled_bands // 2) - sim_s2.compute_skyrmion(filled_bands // 2)) / 2) % 2
+            del model_s1, model_s2, sim_s1, sim_s2
+            return v
+        else:
+            raise NotImplementedError
+
     def plot_spin_texture(self, filled_bands=None, normalize=True):
         if self.model.dim != 2:
             print("Spin texture plotting is only supported in 2-D.")
@@ -233,3 +252,18 @@ class Simulator:
         ax.quiver(kx, ky, kz, s[:, :, 0:1], s[:, :, 1:2], s[:, :, 2:3], length=2 * np.pi / self.mesh_points, arrow_length_ratio=0.2)
         ax.set_zlim(-np.pi, np.pi)
         plt.show()
+
+    def plot_spin_heat_map(self, filled_bands=None, normalize=True):
+        if self.model.dim != 2:
+            print("Spin texture plotting is only supported in 2-D.")
+            return
+
+        self.populate_spin(filled_bands)
+        s = self.spin if not normalize else self.normalized_spin()
+
+        for i in range(3):
+            fig = plt.figure()
+            ax = fig.gca()
+            pos = ax.imshow(s[:, :, i], cmap="coolwarm", extent=(-np.pi, np.pi, -np.pi, np.pi))
+            fig.colorbar(pos, ax=ax)
+            plt.show()
