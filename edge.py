@@ -76,10 +76,10 @@ class EdgeSimulator(Simulator):
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
-    def in_gap_states(self, n_states=3, fermi=0.0):
+    def in_gap_states(self, n_states=2, fermi=0.0):
         ids = np.argpartition(np.abs(self.band - fermi), n_states, axis=None)
         ids = np.array(np.unravel_index(ids[:n_states], self.band.shape)).transpose()
-        return [self.states.__getitem__(idx[:-1])[:, idx[-1]] for idx in ids]
+        return [self.states.__getitem__(*idx[:-1])[:, idx[-1]] for idx in ids]
 
     def pdf(self, states, sum_internal=False):
         out = []
@@ -98,4 +98,11 @@ for u in np.arange(-2.5, 2.6, 1):
     sim = EdgeSimulator(BHZModel(u=u, SOC=0.1*pauli[2]), 41)
     sim.open((10, 0))
     sim.plot_band(full=True)
-    print(sim.pdf(sim.in_gap_states(), sum_internal=True))
+    states = sim.in_gap_states(n_states=1)
+    print(sim.pdf(states, sum_internal=True))
+    # if u == -1.5:
+    #     print(states)
+    #     print(sim.states[[20]][:, 19])
+    #     state = sim.states[20, :, 19]
+    #     print(state)
+    #     print((sim.model.open_hamiltonian(sim.N, (0.0, 0.0)) @ state.flatten()) / state.flatten())
