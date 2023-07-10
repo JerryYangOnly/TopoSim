@@ -196,6 +196,11 @@ class Simulator:
         self.spin = np.tensordot(self.S, np.conj(self.states[..., :filled_bands]) @ np.swapaxes(self.states[..., :filled_bands], -1, -2), ([1, self.model.dim], [2, self.model.dim + 1])).transpose((1, 2, 0)).real
         self.spin_evaluted = filled_bands
 
+    def minimum_spin_gap(self, filled_bands=None):
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        self.populate_spin(filled_bands)
+        return np.min(np.sqrt(np.sum(self.spin**2, axis=2)))
+
     def normalized_spin(self):
         s = np.sqrt(np.sum(self.spin**2, axis=2).reshape((self.mesh_points, self.mesh_points, 1)))
         s[s == 0] = np.finfo(np.float32).eps
