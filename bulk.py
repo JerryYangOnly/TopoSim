@@ -39,6 +39,12 @@ class Simulator:
         self.evaluated = True
         return True
 
+    def gs_projector(self, filled_bands=None):
+        if not self.evaluated:
+            self.populate_mesh()
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        return self.states[..., :, :filled_bands] @ np.swapaxes(np.conj(self.states[..., :, :filled_bands]), -1, -2)
+
 
     def direct_band_gap(self, filled_bands=None):
         if not self.evaluated:
