@@ -225,7 +225,7 @@ class Simulator:
         # Normalize the spin for the computation
         expt = np.concatenate((np.zeros((self.mesh_points, self.mesh_points, 1)), self.normalized_spin()), axis=2)
         
-        lat = lambda k: ((np.array(k) + np.pi) // (2 * np.pi / self.mesh_points)).astype(int)
+        lat = lambda k: np.round((np.array(k) + np.pi) / (2 * np.pi / (self.mesh_points - 1))).astype(int)
         model = TwoBandModel(d=lambda k: expt[tuple(lat(k))])
         sim = Simulator(model, self.mesh_points)
         return sim.compute_chern()
