@@ -108,3 +108,20 @@ class EdgeSimulator(Simulator):
         # ax.set_zlim(0, 1)
 
         plt.show()
+        
+    def plot_spin_band(self, band):
+        if self.eff_dim != 1:
+            print("Spin plotting of bands is only supported in 1-D.")
+            return
+        if self.S is None:
+            return
+        if not self.evaluated:
+            self.populate_mesh()
+
+        states = self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands))
+        spin = np.tensordot(self.S, np.conj(states, -1, -2)) @ states, ([1, self.eff_dim], [2, self.eff_dim + 1])).transpose().real
+
+        for i in range(3):
+            plt.plot(self.mesh, spin[:, i])
+            plt.show()
+
