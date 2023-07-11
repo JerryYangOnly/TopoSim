@@ -239,7 +239,7 @@ class Simulator:
             return
         if not self.evaluated:
             self.populate_mesh()
-        self.spin = np.tensordot(self.S, np.conj(self.states[..., :filled_bands]) @ np.swapaxes(self.states[..., :filled_bands], -1, -2), ([1, self.model.dim], [2, self.model.dim + 1])).transpose((1, 2, 0)).real
+        self.spin = np.tensordot(self.S, np.conj(self.states[..., :filled_bands]) @ np.swapaxes(self.states[..., :filled_bands], -1, -2), ([1, 2], [self.model.dim, self.model.dim + 1])).transpose((1, 2, 0)).real
         self.spin_evaluted = filled_bands
 
     def minimum_spin_gap(self, filled_bands=None):
