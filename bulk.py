@@ -86,13 +86,17 @@ class Simulator:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
 
-    def compute_chern(self, filled_bands=None):
+    def compute_chern(self, filled_bands=None, method="hatsugai", **parameters):
         if self.model.dim != 2:
             print("Computation of Chern numbers is only supported in 2-D.")
-        else:
+            return
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        if method == "hatsugai":
             if not self.evaluated:
                 self.populate_mesh()
-            return self._chern_hatsugai(filled_bands if filled_bands else self.model.bands // 2)
+            return self._chern_hatsugai(filled_bands)
+        elif method == "hwcc":
+            return self._chern_wcc(filled_bands, **parameters)
 
     def _chern_hatsugai(self, filled_bands):
         Q = 0.0
@@ -100,9 +104,25 @@ class Simulator:
         F = F @ (np.conj(self.states[1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, 1:, :, :filled_bands])
         F = F @ (np.conj(self.states[1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, 1:, :, :filled_bands])
         F = F @ (np.conj(self.states[:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, :-1, :, :filled_bands])
-        F = -np.angle(np.linalg.det(F))
+        F = np.angle(np.linalg.det(F))
         Q = np.sum(F) / 2.0 / np.pi
         return Q
+    
+    def _chern_wcc(self, filled_bands, wl_density=100):
+        p = np.zeros((wl_density, filled_bands))
+        for i, ky in zip(range(wl_density), np.linspace(-np.pi, np.pi, wl_density)):
+            p[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands, phases=True) / 2 / np.pi
+        # for i in range(filled_bands):
+        #     plt.plot(p[:, i], np.linspace(-np.pi, np.pi, wl_density), "o")
+        # plt.show()
+        # plt.close()
+        p = np.sum(p, axis=1)
+        p -= np.floor(p)
+        p -= np.roll(p, 1)
+        p = p[1:]
+        p[p > 0.5] -= 1
+        p[p <= -0.5] += 1
+        return np.sum(p)
 
     def compute_z2(self, filled_bands=None, SOC=True):
         if self.model.dim != 2:
