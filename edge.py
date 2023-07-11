@@ -99,9 +99,7 @@ class EdgeSimulator(Simulator):
         ax = fig.gca()
 
         pdfs = np.array(self.pdfs(self.states[:, :, band]))
-        X, Y = np.meshgrid(self.mesh, np.arange(np.prod(self.N[self.open_dim])), indexing='ij')
 
-        # ax.plot_surface(X, Y, pdfs)
         ax.imshow(pdfs.transpose(), aspect=2 * np.pi / np.prod(self.N[self.open_dim]), extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])))
         ax.set_xlabel("Momentum")
         ax.set_ylabel("Site")
@@ -125,3 +123,18 @@ class EdgeSimulator(Simulator):
             plt.plot(self.mesh, spin[:, i])
             plt.show()
 
+    def entanglement_spectrum(self, filled_bands=None):
+        if self.eff_dim != 1:
+            print("Entanglement spectra is only supported in 1-D.")
+            return
+
+        filled_bands = filled_bands if filled_bands else self.eff_bands // 2
+        proj = self.gs_projector(filled_bands)
+        proj = proj[:, :self.eff_bands // 2, :self.eff_bands // 2]
+        w, _ = np.linalg.eigh(proj)
+
+        for i in range(self.eff_bands // 2):
+            plt.plot(self.mesh, w[:, i], "k-")
+        plt.show()
+
+        return w
