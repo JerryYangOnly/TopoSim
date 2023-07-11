@@ -86,7 +86,7 @@ class Simulator:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
 
-    def compute_chern(self, filled_bands=None, method="hatsugai", **parameters):
+    def compute_chern(self, filled_bands=None, method="hwcc", **kwargs):
         if self.model.dim != 2:
             print("Computation of Chern numbers is only supported in 2-D.")
             return
@@ -96,7 +96,7 @@ class Simulator:
                 self.populate_mesh()
             return self._chern_hatsugai(filled_bands)
         elif method == "hwcc":
-            return self._chern_wcc(filled_bands, **parameters)
+            return self._chern_wcc(filled_bands, **kwargs)
 
     def _chern_hatsugai(self, filled_bands):
         Q = 0.0
@@ -112,10 +112,7 @@ class Simulator:
         p = np.zeros((wl_density, filled_bands))
         for i, ky in zip(range(wl_density), np.linspace(-np.pi, np.pi, wl_density)):
             p[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands, phases=True) / 2 / np.pi
-        # for i in range(filled_bands):
-        #     plt.plot(p[:, i], np.linspace(-np.pi, np.pi, wl_density), "o")
-        # plt.show()
-        # plt.close()
+        
         p = np.sum(p, axis=1)
         p -= np.floor(p)
         p -= np.roll(p, 1)
@@ -124,7 +121,7 @@ class Simulator:
         p[p <= -0.5] += 1
         return np.sum(p)
 
-    def compute_z2(self, filled_bands=None, SOC=True):
+    def compute_z2(self, filled_bands=None, SOC=True, method="hwcc", **kwargs):
         if self.model.dim != 2:
             print("Computation of Z2 invariant is only supported in 2-D.")
             return
@@ -148,8 +145,10 @@ class Simulator:
             del model_s1, model_s2, sim_s1, sim_s2
             return v
         else:
-            # return self._z2_fu_kane(filled_bands)
-            return self._z2_wcc(filled_bands)
+            if method == "fu_kane":
+                return self._z2_fu_kane(filled_bands)
+            elif method == "hwcc":
+                return self._z2_wcc(filled_bands, **kwargs)
 
     def _z2_fu_kane(self, filled_bands):
         # Method of Fu and Kane
@@ -185,12 +184,33 @@ class Simulator:
         
         return ((W - Q) / 2 / np.pi) % 2
 
-    def _z2_wcc(self, filled_bands):
-        phases_0 = self.wilson_loop(lambda x: (2 * np.pi * (x - 1/2), 0.001), filled_bands=filled_bands, phases=True)
-        phases_pi = self.wilson_loop(lambda x: (2 * np.pi * (x - 1/2), np.pi - 0.001), filled_bands=filled_bands, phases=True)
-        theta = np.random.rand() * 2 * np.pi - np.pi
+    def _z2_wcc(self, filled_bands, wl_density=100):
+        x = np.zeros((wl_density, filled_bands))
+        g = np.zeros(wl_density)
 
-        return (sum(phases_0 < theta) - sum(phases_pi < theta)) % 2
+        for i, ky in zip(range(wl_density), np.linspace(0, np.pi, wl_density)):
+            x[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands, phases=True) / 2 / np.pi
+        x -= np.floor(x)
+
+        for i in range(wl_density):
+            s = np.sort(x[i])
+            s -= np.roll(s, 1)
+            s[0] += 1
+            k = np.argmin(s)
+            g[i] = (x[i, k] + x[i, k - 1]) / 2 if k != 0 else ((x[i, k] + x[i, k - 1] + 1) / 2) % 1
+
+        # for i in range(filled_bands):
+        #     plt.plot(x[:, i], np.linspace(0, np.pi, wl_density), "o")
+        # plt.plot(g, np.linspace(0, np.pi, wl_density))
+        # plt.show()
+        # plt.close()
+
+        n = 0
+        for i in range(wl_density - 1):
+            gmin, gmax = (g[i], g[i + 1]) if g[i] < g[i + 1] else (g[i + 1], g[i])
+            n += np.sum((x[i] >= gmin) & (x[i] < gmax))
+
+        return n % 2
 
 
     def wilson_loop(self, loop, points=100, filled_bands=None, phases=False):
