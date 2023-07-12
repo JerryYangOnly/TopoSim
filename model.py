@@ -75,6 +75,22 @@ class Model:
 
         return hamil
 
+class Potential(Model):
+    def __init__(self, model, potential, **parameters):
+        self.model = model
+        self.potential = potential
+
+        self.name = self.model.name
+        self.dim = self.model.dim
+        self.bands = self.model.bands
+
+    def hamiltonian(self, k):
+        return self.model.hamiltonian(k) + self.potential(k)
+
+    def open_hamiltonian(self, N, k, PBC=None):
+        return self.model.open_hamiltonian(N, k, PBC) + self.potential(N, k)
+
+
 class TwoBandModel(Model):
     name = "Two Band"
     dim = 2
