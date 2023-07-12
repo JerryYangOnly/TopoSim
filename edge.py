@@ -56,6 +56,7 @@ class EdgeSimulator(Simulator):
                 else:
                     ax.plot(self.mesh, self.band[:, i])
             plt.show()
+            plt.close(fig)
 
         elif self.eff_dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -65,6 +66,7 @@ class EdgeSimulator(Simulator):
                 ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
             plt.show()
+            plt.close(fig)
 
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
@@ -106,6 +108,7 @@ class EdgeSimulator(Simulator):
         # ax.set_zlim(0, 1)
 
         plt.show()
+        plt.close(fig)
         
     def plot_spin_band(self, band):
         if self.eff_dim != 1:
@@ -119,9 +122,12 @@ class EdgeSimulator(Simulator):
         states = self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands))
         spin = np.tensordot(self.S, np.swapaxes(np.conj(states), -1, -2) @ states, ([1, 2], [self.eff_dim, self.eff_dim + 1])).transpose().real
 
+        fig = plt.figure()
+        ax = fig.gca()
         for i in range(3):
-            plt.plot(self.mesh, spin[:, i])
+            ax.plot(self.mesh, spin[:, i])
             plt.show()
+            plt.close(fig)
 
     def entanglement_spectrum(self, filled_bands=None):
         if self.eff_dim != 1:
@@ -133,8 +139,11 @@ class EdgeSimulator(Simulator):
         proj = proj[:, :self.eff_bands // 2, :self.eff_bands // 2]
         w, _ = np.linalg.eigh(proj)
 
+        fig = plt.figure()
+        ax = fig.gca()
         for i in range(self.eff_bands // 2):
-            plt.plot(self.mesh, w[:, i], "k-")
+            ax.plot(self.mesh, w[:, i], "k-")
         plt.show()
+        plt.close(fig)
 
         return w

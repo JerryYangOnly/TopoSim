@@ -68,6 +68,7 @@ class Simulator:
                 for i in range(self.model.bands):
                     ax.plot(self.mesh, self.band[:, i])
             plt.show()
+            plt.close(fig)
 
         elif self.model.dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -81,6 +82,7 @@ class Simulator:
                     ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
             plt.show()
+            plt.close(fig)
 
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
@@ -309,6 +311,7 @@ class Simulator:
         ax.quiver(kx, ky, kz, s[:, :, 0:1], s[:, :, 1:2], s[:, :, 2:3], length=2 * np.pi / self.mesh_points, arrow_length_ratio=0.2)
         ax.set_zlim(-np.pi, np.pi)
         plt.show()
+        plt.close(fig)
 
     def plot_spin_heat_map(self, filled_bands=None, normalize=True):
         if self.model.dim != 2:
@@ -324,3 +327,4 @@ class Simulator:
             pos = ax.imshow(s[:, :, i], cmap="coolwarm", extent=(-np.pi, np.pi, -np.pi, np.pi))
             fig.colorbar(pos, ax=ax)
             plt.show()
+            plt.close(fig)
