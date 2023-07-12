@@ -61,12 +61,18 @@ class Simulator:
 
         if self.model.dim == 1:
             fig, ax = plt.subplots()
+
             if not full:
                 ax.plot(self.mesh, self.band[:, filled_bands - 1])
                 ax.plot(self.mesh, self.band[:, filled_bands])
             else:
                 for i in range(self.model.bands):
                     ax.plot(self.mesh, self.band[:, i])
+
+            ax.set_xlabel("$k_x$")
+            ax.set_ylabel("$E(k_x)$")
+            ax.set_title("Band spectrum")
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             plt.show()
             plt.close(fig)
 
@@ -81,6 +87,13 @@ class Simulator:
                 for i in range(self.model.bands):
                     ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
+
+            ax.set_xlabel("$k_x$")
+            ax.set_ylabel("$k_y$")
+            ax.set_zlabel("$E(\\mathbf{k})$")
+            ax.set_title("Band spectrum")
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             plt.show()
             plt.close(fig)
 
@@ -309,6 +322,12 @@ class Simulator:
 
         s = self.spin if not normalize else self.normalized_spin()
         ax.quiver(kx, ky, kz, s[:, :, 0:1], s[:, :, 1:2], s[:, :, 2:3], length=2 * np.pi / self.mesh_points, arrow_length_ratio=0.2)
+        ax.set_xlabel("$k_x$")
+        ax.set_ylabel("$k_y$")
+        ax.set_zlabel("$k_z$")
+        ax.set_title("Spin texture")
+        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+        ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         ax.set_zlim(-np.pi, np.pi)
         plt.show()
         plt.close(fig)
@@ -324,7 +343,12 @@ class Simulator:
         for i in range(3):
             fig = plt.figure()
             ax = fig.gca()
-            pos = ax.imshow(s[:, :, i], cmap="coolwarm", extent=(-np.pi, np.pi, -np.pi, np.pi))
+            pos = ax.imshow(s[:, :, i].transpose(), cmap="coolwarm", extent=(-np.pi, np.pi, -np.pi, np.pi), origin="lower")
+            ax.set_xlabel("$k_x$")
+            ax.set_ylabel("$k_y$")
+            ax.set_title("$\\langle S\\rangle_" + ["x", "y", "z"][i] + "$")
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             fig.colorbar(pos, ax=ax)
             plt.show()
             plt.close(fig)

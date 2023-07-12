@@ -55,6 +55,13 @@ class EdgeSimulator(Simulator):
                     ax.plot(self.mesh, self.band[:, i], "k-")
                 else:
                     ax.plot(self.mesh, self.band[:, i])
+            
+            dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+            dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+            ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
+            ax.set_ylabel("$E(\\mathbf{k})$")
+            ax.set_title("Band spectrum")
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             plt.show()
             plt.close(fig)
 
@@ -65,6 +72,15 @@ class EdgeSimulator(Simulator):
             for i in range(self.eff_bands):
                 ax.plot_surface(X, Y, self.band[:, :, i])
             del X, Y
+
+            dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+            dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+            ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
+            ax.set_ylabel("$k_{" + dim_labels(dims[1]) + "}$")
+            ax.set_zlabel("$E(\\mathbf{k})$")
+            ax.set_title("Band spectrum")
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             plt.show()
             plt.close(fig)
 
@@ -100,11 +116,13 @@ class EdgeSimulator(Simulator):
         # ax = fig.gca(projection="3d")
         ax = fig.gca()
 
-        pdfs = np.array(self.pdfs(self.states[:, :, band]))
+        pdfs = np.array(self.pdfs(self.states[:, :, band], sum_internal=True))
 
-        ax.imshow(pdfs.transpose(), aspect=2 * np.pi / np.prod(self.N[self.open_dim]), extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])))
+        ax.imshow(pdfs.transpose(), aspect=2 * np.pi / np.prod(self.N[self.open_dim]), extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])), origin="lower")
         ax.set_xlabel("Momentum")
         ax.set_ylabel("Site")
+        ax.set_title("Probability distributions of band %d" % (band + 1))
+        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         # ax.set_zlim(0, 1)
 
         plt.show()
@@ -125,7 +143,15 @@ class EdgeSimulator(Simulator):
         fig = plt.figure()
         ax = fig.gca()
         for i in range(3):
-            ax.plot(self.mesh, spin[:, i])
+            dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+            dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+
+            ax.plot(self.mesh, spin[:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}$")
+
+            ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
+            ax.set_ylabel("$S(\\mathbf{k})$")
+            ax.set_title("Spin expectations for band %d" % (band + 1))
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             plt.show()
             plt.close(fig)
 
