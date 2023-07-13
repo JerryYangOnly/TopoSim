@@ -208,7 +208,7 @@ class Simulator:
             else:
                 return (v * (x - 5 / 6), -np.pi)
         W = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
-        print(np.angle(W))
+        # print(np.angle(W))
         W = np.angle(scipy.linalg.det(W))
         
         return ((W - Q) / 2 / np.pi) % 2
@@ -223,16 +223,16 @@ class Simulator:
 
         for i in range(wl_density):
             s = np.sort(x[i])
+            x[i, :] = s
             s -= np.roll(s, 1)
             s[0] += 1
-            k = np.argmin(s)
+            k = np.argmax(s)
             g[i] = (x[i, k] + x[i, k - 1]) / 2 if k != 0 else ((x[i, k] + x[i, k - 1] + 1) / 2) % 1
 
         # for i in range(filled_bands):
         #     plt.plot(x[:, i], np.linspace(0, np.pi, wl_density), "o")
         # plt.plot(g, np.linspace(0, np.pi, wl_density))
         # plt.show()
-        # plt.close()
 
         n = 0
         for i in range(wl_density - 1):
