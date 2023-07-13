@@ -160,21 +160,29 @@ class EdgeSimulator(Simulator):
         if not self.evaluated:
             self.populate_mesh()
 
-        states = self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands))
-        spin = np.tensordot(self.S, np.swapaxes(np.conj(states), -1, -2) @ states, ([1, 2], [self.eff_dim, self.eff_dim + 1])).transpose().real
-
-        fig = plt.figure()
-        ax = fig.gca()
+        if not isinstance(band, (list, tuple, np.ndarray)):
+            bands = [band]
+        else:
+            bands = band
+        
+        states = [self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands)) for band in bands]
+        spin = [np.tensordot(self.S, np.swapaxes(np.conj(state), -1, -2) @ state, ([1, 2], [self.eff_dim, self.eff_dim + 1])).transpose().real for state in states]
+        
         figs = []
         for i in range(3):
+            fig = plt.figure()
+            ax = fig.gca()
+
             dims = [i for i in range(self.model.dim) if i not in self.open_dim]
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
 
-            ax.plot(self.mesh, spin[:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}$")
+            for b, s in zip(range(len(spin)), spin):
+                ax.plot(self.mesh, s[:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}^{" + str(bands[b] + 1) + "}$")
 
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
-            ax.set_ylabel("$S(\\mathbf{k})$")
-            ax.set_title("Spin expectations for band %d" % (band + 1))
+            ax.set_ylabel("$S_" + ["x", "y", "z"][i] + "(\\mathbf{k})$")
+            ax.set_title("Spin expectations")
+            ax.legend()
             if pi_ticks:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
