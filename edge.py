@@ -44,7 +44,7 @@ class EdgeSimulator(Simulator):
         self.states = self.states.reshape((*([self.mesh_points] * self.eff_dim), self.eff_bands, self.eff_bands))
         self.evaluated = True
 
-    def plot_band(self, band_hl=()):
+    def plot_band(self, band_hl=(), pi_ticks=True, close_fig=True, save_fig=""):
         if not self.evaluated:
             self.populate_mesh()
 
@@ -61,9 +61,17 @@ class EdgeSimulator(Simulator):
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel("$E(\\mathbf{k})$")
             ax.set_title("Band spectrum")
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            plt.show()
-            plt.close(fig)
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+
+            if save_fig:
+                fig.savefig(save_fig, dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
 
         elif self.eff_dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -79,10 +87,17 @@ class EdgeSimulator(Simulator):
             ax.set_ylabel("$k_{" + dim_labels(dims[1]) + "}$")
             ax.set_zlabel("$E(\\mathbf{k})$")
             ax.set_title("Band spectrum")
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            plt.show()
-            plt.close(fig)
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if save_fig:
+                fig.savefig(save_fig, dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
 
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
@@ -105,7 +120,7 @@ class EdgeSimulator(Simulator):
     def pdfs(self, states, sum_internal=True):
         return [self.pdf(state, sum_internal=sum_internal) for state in states]
         
-    def position_heat_map_band(self, band):
+    def position_heat_map_band(self, band, pi_ticks=True, close_fig=True, save_fig=""):
         if self.eff_dim != 1 or len(self.open_dim) != 1:
             print("Dimension of the model is not supported. Are boundaries opened correctly?")
             return
@@ -122,13 +137,21 @@ class EdgeSimulator(Simulator):
         ax.set_xlabel("Momentum")
         ax.set_ylabel("Site")
         ax.set_title("Probability distributions of band %d" % (band + 1))
-        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+
+        if pi_ticks:
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         # ax.set_zlim(0, 1)
 
-        plt.show()
-        plt.close(fig)
+        if save_fig:
+            fig.savefig(save_fig, dpi=600)
+        else:
+            plt.show()
+        if close_fig:
+            plt.close(fig)
+        else:
+            return fig
         
-    def plot_spin_band(self, band):
+    def plot_spin_band(self, band, pi_ticks=True, close_fig=True, save_fig=""):
         if self.eff_dim != 1:
             print("Spin plotting of bands is only supported in 1-D.")
             return
@@ -151,9 +174,19 @@ class EdgeSimulator(Simulator):
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel("$S(\\mathbf{k})$")
             ax.set_title("Spin expectations for band %d" % (band + 1))
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            plt.show()
-            plt.close(fig)
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if save_fig:
+                if save_fig.endswith(".png"):
+                    fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                else:
+                    fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
 
     def entanglement_spectrum(self, filled_bands=None):
         if self.eff_dim != 1:
@@ -166,7 +199,7 @@ class EdgeSimulator(Simulator):
         w, _ = np.linalg.eigh(proj)
         return w
     
-    def plot_entanglement_spectrum(self, filled_bands=None):
+    def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=True, save_fig=""):
         w = self.entanglement_spectrum(filled_bands)
 
         fig = plt.figure()
@@ -180,6 +213,13 @@ class EdgeSimulator(Simulator):
         ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
         ax.set_ylabel("$\\ksi(k_" + dim_labels(dims[0]) + ")$")
         ax.set_title("Entanglement spectrum")
-        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-        plt.show()
-        plt.close(fig)
+        if pi_ticks:
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+        if save_fig:
+            fig.savefig(save_fig, dpi=600)
+        else:
+            plt.show()
+        if close_fig:
+            plt.close(fig)
+        else:
+            return fig

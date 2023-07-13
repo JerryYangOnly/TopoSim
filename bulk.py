@@ -53,7 +53,7 @@ class Simulator:
             filled_bands = self.model.bands // 2    # Default to half-filling
         return np.min(self.band[:, :, filled_bands] - self.band[:, :, filled_bands - 1])
 
-    def plot_band(self, filled_bands=None, full=False):
+    def plot_band(self, filled_bands=None, full=False, pi_ticks=True, close_fig=True, save_fig=""):
         if not self.evaluated:
             self.populate_mesh()
         if not filled_bands:
@@ -72,9 +72,16 @@ class Simulator:
             ax.set_xlabel("$k_x$")
             ax.set_ylabel("$E(k_x)$")
             ax.set_title("Band spectrum")
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            plt.show()
-            plt.close(fig)
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if save_fig:
+                fig.savefig(save_fig, dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
 
         elif self.model.dim == 2:
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -92,10 +99,17 @@ class Simulator:
             ax.set_ylabel("$k_y$")
             ax.set_zlabel("$E(\\mathbf{k})$")
             ax.set_title("Band spectrum")
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            plt.show()
-            plt.close(fig)
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if save_fig:
+                fig.savefig(save_fig, dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
 
         else:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
@@ -309,7 +323,7 @@ class Simulator:
         else:
             raise NotImplementedError
 
-    def plot_spin_texture(self, filled_bands=None, normalize=True):
+    def plot_spin_texture(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=True, save_fig=""):
         if self.model.dim != 2:
             print("Spin texture plotting is only supported in 2-D.")
             return
@@ -326,13 +340,20 @@ class Simulator:
         ax.set_ylabel("$k_y$")
         ax.set_zlabel("$k_z$")
         ax.set_title("Spin texture")
-        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-        ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+        if pi_ticks:
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         ax.set_zlim(-np.pi, np.pi)
-        plt.show()
-        plt.close(fig)
+        if save_fig:
+            fig.savefig(save_fig, dpi=600)
+        else:
+            plt.show()
+        if close_fig:
+            plt.close(fig)
+        else:
+            return fig
 
-    def plot_spin_heat_map(self, filled_bands=None, normalize=True):
+    def plot_spin_heat_map(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=True, save_fig=""):
         if self.model.dim != 2:
             print("Spin texture plotting is only supported in 2-D.")
             return
@@ -347,8 +368,18 @@ class Simulator:
             ax.set_xlabel("$k_x$")
             ax.set_ylabel("$k_y$")
             ax.set_title("$\\langle S\\rangle_" + ["x", "y", "z"][i] + "$")
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             fig.colorbar(pos, ax=ax)
-            plt.show()
-            plt.close(fig)
+            if save_fig:
+                if save_fig.endswith(".png"):
+                    fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                else:
+                    fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                return fig
