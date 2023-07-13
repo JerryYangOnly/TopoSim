@@ -361,6 +361,7 @@ class Simulator:
         self.populate_spin(filled_bands)
         s = self.spin if not normalize else self.normalized_spin()
 
+        figs = []
         for i in range(3):
             fig = plt.figure()
             ax = fig.gca()
@@ -382,4 +383,6 @@ class Simulator:
             if close_fig:
                 plt.close(fig)
             else:
-                return fig
+                figs.append(fig)
+        if not close_fig:
+            return figs
