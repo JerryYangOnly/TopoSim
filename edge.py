@@ -164,12 +164,22 @@ class EdgeSimulator(Simulator):
         proj = self.gs_projector(filled_bands)
         proj = proj[:, :self.eff_bands // 2, :self.eff_bands // 2]
         w, _ = np.linalg.eigh(proj)
+        return w
+    
+    def plot_entanglement_spectrum(self, filled_bands=None):
+        w = self.entanglement_spectrum(filled_bands)
 
         fig = plt.figure()
         ax = fig.gca()
         for i in range(self.eff_bands // 2):
             ax.plot(self.mesh, w[:, i], "k-")
+
+        dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+        dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+
+        ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
+        ax.set_ylabel("$\\ksi(k_" + dim_labels(dims[0]) + ")$")
+        ax.set_title("Entanglement spectrum")
+        ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         plt.show()
         plt.close(fig)
-
-        return w
