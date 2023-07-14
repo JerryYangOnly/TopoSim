@@ -9,7 +9,8 @@ class EdgeSimulator(Simulator):
     def __init__(self, model: Model, points: int):
         super().__init__(model, points)
 
-        self.N = (0) * self.model.dim
+        self.N = np.zeros(self.model.dim)
+        self.PBC = np.array([True] * self.model.dim)
         self.open_dim = []
         self.eff_dim = self.model.dim
         self.eff_bands = self.model.bands
@@ -17,6 +18,7 @@ class EdgeSimulator(Simulator):
     def open(self, N):
         self.N = np.array(N)
         self.open_dim = np.arange(self.model.dim)[self.N > 0]
+        self.PBC[self.open_dim] = False
         
         self.eff_dim = self.model.dim - len(self.open_dim)
         self.eff_bands = self.model.bands * np.prod(self.N[self.open_dim])
@@ -24,6 +26,9 @@ class EdgeSimulator(Simulator):
         self.states = np.zeros((*([self.mesh_points] * self.eff_dim), self.eff_bands, self.eff_bands), dtype=np.complex64)
          
         self.evaluated = False
+
+    def set_PBC(self, PBC):
+        self.PBC = np.array(PBC)
 
     def populate_mesh(self):
         if self.evaluated:
@@ -36,7 +41,7 @@ class EdgeSimulator(Simulator):
                 if j not in self.open_dim:
                     idx[j] = k % self.mesh_points
                     k //= self.mesh_points
-            w, v = scipy.linalg.eigh(self.model.open_hamiltonian(self.N, [self.mesh[j] for j in idx]))
+            w, v = scipy.linalg.eigh(self.model.open_hamiltonian(self.N, [self.mesh[j] for j in idx], PBC=self.PBC))
             self.band[i, :] = w
             self.states[i, :, :] = v
 
