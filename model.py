@@ -69,7 +69,7 @@ class Model:
         for i in range(N[open_dim[0]]):
             hamil[i * sz:(i + 1) * sz] = np.roll(v, i * sz, axis=1)
         
-        if PBC is None or PBC[open_dim[0]] is False:
+        if PBC is None or not PBC[open_dim[0]]:
             # Enforce open boundary conditions / no coupling between ends
             for i in range(cl):
                 hamil[i*sz:(i+1)*sz, -(cl-i)*sz:] = np.zeros((sz, (cl-i)*sz))
