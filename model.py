@@ -36,7 +36,7 @@ class Model:
     def get_parameters(self):
         return self.parameters
 
-    def open_hamiltonian(self, N, k, PBC=None):
+    def open_hamiltonian(self, N, k, PBC=None, cl=1):
         """Opens boundary conditions assuming tight-binding, i.e., no direct interactions between the first
         and the last cell along the dimensions opened.
         Assumes square lattice and a lattice parameter of 1.
@@ -71,7 +71,9 @@ class Model:
         
         if PBC is None or PBC[open_dim[0]] is False:
             # Enforce open boundary conditions / no coupling between ends
-            hamil[:sz, -sz:] = hamil[-sz:, :sz] = np.zeros((sz, sz))
+            for i in range(cl):
+                hamil[i*sz:(i+1)*sz, -(cl-i)*sz:] = np.zeros((sz, (cl-i)*sz))
+                hamil[-(cl-i)*sz:, i*sz:(i+1)*sz] = np.zeros(((cl-i)*sz, sz))
 
         return hamil
 
