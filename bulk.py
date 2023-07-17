@@ -307,19 +307,14 @@ class Simulator:
             if filled_bands and filled_bands % 2 == 1:
                 print("Error: filled_bands cannot be odd in Z2 computation!")
                 return -1
-            model_s1 = Model()
-            model_s2 = Model()
-            model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
-            model_s2.hamiltonian = lambda k: self.model.hamiltonian(k)[self.model.bands // 2:, self.model.bands // 2:]
-            model_s1.dim = model_s2.dim = self.model.dim
-            model_s1.bands = model_s2.bands = self.model.bands // 2
-            sim_s1 = Simulator(model_s1, self.mesh_points)
-            sim_s2 = Simulator(model_s2, self.mesh_points)
-            sim_s1.set_spin_op(Ss)
-            sim_s2.set_spin_op(Ss)
-            v = ((sim_s1.compute_skyrmion(filled_bands // 2) - sim_s2.compute_skyrmion(filled_bands // 2)) / 2) % 2
-            del model_s1, model_s2, sim_s1, sim_s2
-            return v
+            sop1 = np.kron(np.array([[1, 0], [0, 0]]), Ss)
+            sop2 = np.kron(np.array([[0, 0], [0, 1]]), Ss)
+            self.set_spin_op(sop1)
+            v = self.compute_skyrmion(filled_bands)
+            self.set_spin_op(sop2)
+            v -= self.compute_skyrmion(filled_bands)
+            self.spin_evaluated = 0
+            return (v / 2) %2
         else:
             raise NotImplementedError
 
