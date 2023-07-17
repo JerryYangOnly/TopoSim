@@ -14,6 +14,7 @@ class Model:
     name = NotImplemented       # The name of the model
     dim = NotImplemented        # The dimension of the model
     bands = NotImplemented      # The number of bands of the model
+    hop_len = 1                 # Tight-binding hopping distance, default is 1 (nearest neighbor only)
     defaults = {}               # The parameters of the model and default values
     required = []               # The parameters required, the absence of which will produce a warning
 
@@ -36,7 +37,7 @@ class Model:
     def get_parameters(self):
         return self.parameters
 
-    def open_hamiltonian(self, N, k, PBC=None, cl=1):
+    def open_hamiltonian(self, N, k, PBC=None):
         """Opens boundary conditions assuming tight-binding, i.e., no direct interactions between the first
         and the last cell along the dimensions opened.
         Assumes square lattice and a lattice parameter of 1.
@@ -71,20 +72,21 @@ class Model:
         
         if PBC is None or not PBC[open_dim[0]]:
             # Enforce open boundary conditions / no coupling between ends
-            for i in range(cl):
-                hamil[i*sz:(i+1)*sz, -(cl-i)*sz:] = np.zeros((sz, (cl-i)*sz))
-                hamil[-(cl-i)*sz:, i*sz:(i+1)*sz] = np.zeros(((cl-i)*sz, sz))
+            for i in range(self.hop_len):
+                hamil[i*sz:(i+1)*sz, -(self.hop_len-i)*sz:] = np.zeros((sz, (self.hop_len-i)*sz))
+                hamil[-(self.hop_len-i)*sz:, i*sz:(i+1)*sz] = np.zeros(((self.hop_len-i)*sz, sz))
 
         return hamil
 
 class Potential(Model):
-    def __init__(self, model, potential, **parameters):
+    def __init__(self, model: Model, potential: callable, **parameters):
         self.model = model
         self.potential = potential
 
         self.name = self.model.name
         self.dim = self.model.dim
         self.bands = self.model.bands
+        self.hop_len = self.model.hop_len
 
     def hamiltonian(self, k):
         return self.model.hamiltonian(k) + self.potential(k)
