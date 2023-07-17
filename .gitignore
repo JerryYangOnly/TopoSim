@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Raw data produced
+*.npy
+*.npz
+
 # Distribution / packaging
 .Python
 build/
