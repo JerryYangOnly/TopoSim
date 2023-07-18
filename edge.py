@@ -204,28 +204,37 @@ class EdgeSimulator(Simulator):
         if not close_fig:
             return figs
 
-    def entanglement_spectrum(self, filled_bands=None, op=None):
+    def entanglement_spectrum(self, filled_bands=None, op: np.ndarray=None, trace: callable=None):
         if self.eff_dim != 1:
             print("Entanglement spectra is only supported in 1-D.")
             return
-
+        if op is not None and trace is not None:
+            print("Operator and trace cannot be specified together!")
+            return
+        
         filled_bands = filled_bands if filled_bands else self.eff_bands // 2
-        proj = np.zeros((self.mesh_points, self.eff_bands, self.eff_bands), dtype=np.complex64)
+        if not self.evaluated:
+            self.populate_mesh(filled_bands)
+        # proj = np.zeros((self.mesh_points, self.eff_bands, self.eff_bands), dtype=np.complex64)
         if op is None:
             proj = self.gs_projector(filled_bands)
         else:
             op = np.kron(np.eye(np.prod(self.N[self.open_dim])), op)
             proj = op @ self.states[..., :, :filled_bands] @ np.swapaxes(np.conj(self.states[..., :, :filled_bands]), -1, -2) @ np.conj(op).T
-        proj = proj[:, :self.eff_bands // 2, :self.eff_bands // 2]
+        
+        N = proj.shape[-1] // 2
+        proj = proj[..., :N, :N]
+        if trace is not None:
+            proj = trace(proj)
         w, _ = np.linalg.eigh(proj)
         return w
     
-    def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=True, save_fig="", op=None):
-        w = self.entanglement_spectrum(filled_bands, op=op)
+    def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=True, save_fig="", op=None, trace: callable=None):
+        w = self.entanglement_spectrum(filled_bands, op=op, trace=trace)
 
         fig = plt.figure()
         ax = fig.gca()
-        for i in range(self.eff_bands // 2):
+        for i in range(w.shape[1]):
             ax.plot(self.mesh, w[:, i], "ko")
 
         dims = [i for i in range(self.model.dim) if i not in self.open_dim]
