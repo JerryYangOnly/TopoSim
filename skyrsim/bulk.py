@@ -1,8 +1,7 @@
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
-from model import *
-from tqdm import tqdm
+from .model import *
 
 # A class for simulating results
 class Simulator:

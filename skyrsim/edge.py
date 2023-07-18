@@ -2,8 +2,8 @@ import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 
-from bulk import Simulator
-from model import *
+from .bulk import Simulator
+from .model import *
 
 class EdgeSimulator(Simulator):
     def __init__(self, model: Model, points: int):
