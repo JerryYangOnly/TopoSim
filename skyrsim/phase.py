@@ -3,7 +3,7 @@ import scipy
 import scipy.linalg
 import matplotlib.pyplot as plt
 
-import multiprocessing
+import multiprocessing as mp
 import typing
 
 from .model import *
