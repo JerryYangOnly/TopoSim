@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import scipy.linalg
 import matplotlib.pyplot as plt
 
 from .bulk import Simulator
