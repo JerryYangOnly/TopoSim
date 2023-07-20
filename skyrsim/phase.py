@@ -100,7 +100,9 @@ class PhaseDiagram:
             res.append(sim.minimum_spin_gap(self.filled_bands))
         return tuple(res)
 
-    def generate(self, invar: list, max_cpu: int=0) -> None:
+    def generate(self, invar: list = [], max_cpu: int=0) -> None:
+        if invar == []:
+            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
         if max_cpu == 0:
             max_cpu = mp.cpu_count() // 2
 
