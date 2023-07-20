@@ -11,7 +11,7 @@ from .model import *
 from .bulk import Simulator
 
 class ModelWrapper:
-    def __init__(self, model: type(Model), param_x: str, param_y: str):
+    def __init__(self, model: typing.Type[Model], param_x: str, param_y: str):
         self.model = model
         self.parameters = copy.deepcopy(self.model.defaults)
         if param_x not in self.parameters:
@@ -193,6 +193,7 @@ class PhaseDiagram:
             elif label is True:
                 cb.set_label({"chern": "$\\mathcal{C}$", "skyr": "$\\mathcal{Q}$", "z2": "$\\nu$",
                     "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "\\Delta |S|"}[key])
+            count += 1
 
         fig.suptitle(self.title)
         fig.savefig("_".join([self.model.param_x, self.model.param_y]) + ".png", dpi=600)
