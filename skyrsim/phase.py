@@ -94,7 +94,7 @@ class PhaseDiagram:
         if self.z2:
             res.append(sim.compute_z2(self.filled_bands))
         if self.skyr_z2:
-            res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands))
+            res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands, SOC=False))
         if self.gap:
             res.append(sim.direct_band_gap(self.filled_bands))
         if self.spin_gap:
@@ -103,7 +103,7 @@ class PhaseDiagram:
 
     def generate(self, invar: list = [], max_cpu: int=0) -> None:
         if invar == []:
-            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
+            invar = ["chern", "skyr", "gap", "spin_gap"]
         if max_cpu == 0:
             max_cpu = mp.cpu_count() // 2
 
