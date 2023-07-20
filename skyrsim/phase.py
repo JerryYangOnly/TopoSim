@@ -4,6 +4,7 @@ import scipy.linalg
 import matplotlib.pyplot as plt
 
 import multiprocessing
+import typing
 
 from .model import *
 from .bulk import Simulator
@@ -33,7 +34,8 @@ class ModelWrapper:
 
 
 class PhaseDiagram:
-    def __init__(self, model: ModelWrapper, xlim: tuple | np.ndarray, ylim: tuple | np.ndarray, sim_density: int=101):
+    def __init__(self, model: ModelWrapper, xlim: typing.Union[tuple, np.ndarray],
+            ylim: typing.Union[tuple, np.ndarray], sim_density: int=101):
         self.model = model
 
         if isinstance(xlim, tuple):
@@ -126,7 +128,7 @@ class PhaseDiagram:
     def load(self, filename: str) -> None:
         self.result = np.load(filename)
 
-    def plot(self, invar: list = [], label: bool | dict = True, title: bool | dict = False) -> None:
+    def plot(self, invar: list = [], label: typing.Union[bool, dict] = True, title: typing.Union[bool, dict] = False) -> None:
         if invar == []:
             invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
 
@@ -163,7 +165,7 @@ class PhaseDiagram:
             fig.savefig("_".join([self.model.param_x, self.model.param_y, key]) + ".png", dpi=600)
             plt.close(fig)
 
-    def subplots(self, shape: tuple, invar: list = [], label: bool | dict = True) -> None:
+    def subplots(self, shape: tuple, invar: list = [], label: typing.Union[bool, dict] = True) -> None:
         if invar == []:
             invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
 
