@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
         name="skyrsim",
-        version="0.1.0",
+        version="0.2.0",
         author="Yuchen Yang",
         author_email="yuchen@pks.mpg.de",
         description="A package for computing bulk topological invariants and visualizing edge states",
@@ -15,7 +15,7 @@ setuptools.setup(
         packages=setuptools.find_packages(),
         install_requires=[
             "numpy>=1.16",
-            "scipy>=1.9",
+            "scipy>=1.5",
             "matplotlib"
         ],
         classifiers=[
