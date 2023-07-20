@@ -67,13 +67,13 @@ class PhaseDiagram:
         self.chern = self.skyr = self.z2 = self.skyr_z2 = self.gap = self.spin_gap = False
         self.result = {}
 
-    def xlabel(self, label: str) -> None:
+    def set_xlabel(self, label: str) -> None:
         self.xlabel = label
 
-    def ylabel(self, label: str) -> None:
+    def set_ylabel(self, label: str) -> None:
         self.ylabel = label
 
-    def title(self, label: str) -> None:
+    def set_title(self, label: str) -> None:
         self.title = label
 
     def set_spin_op(self, S: np.ndarray) -> None:
