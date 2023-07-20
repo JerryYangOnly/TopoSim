@@ -153,7 +153,7 @@ class PhaseDiagram:
                 cb.set_label(label[key])
             elif label is True:
                 cb.set_label({"chern": "$\\mathcal{C}$", "skyr": "$\\mathcal{Q}$", "z2": "$\\nu$",
-                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "\\Delta |S|"}[key])
+                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$"}[key])
 
             if isinstance(title, dict):
                 ax.set_title(title[key])
@@ -192,9 +192,10 @@ class PhaseDiagram:
                 cb.set_label(label[key])
             elif label is True:
                 cb.set_label({"chern": "$\\mathcal{C}$", "skyr": "$\\mathcal{Q}$", "z2": "$\\nu$",
-                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "\\Delta |S|"}[key])
+                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$"}[key])
             count += 1
 
+        fig.tight_layout()
         fig.suptitle(self.title)
         fig.savefig("_".join([self.model.param_x, self.model.param_y]) + ".png", dpi=600)
         plt.close(fig)
