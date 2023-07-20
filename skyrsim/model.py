@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import scipy.linalg
 
 # Define Pauli matrices for later use
 pauli = [0] * 4
