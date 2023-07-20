@@ -158,12 +158,12 @@ class PhaseDiagram:
             if isinstance(title, dict):
                 ax.set_title(title[key])
             elif title is True:
-                ax.set_title({"chern": "Chern number$\\mathcal{C}$",
+                ax.set_title({"chern": "Chern number $\\mathcal{C}$",
                     "skyr": "Skyrmion number $\\mathcal{Q}$",
                     "z2": "Z2 invariant $\\nu$",
                     "skyr_z2": "Skyrmion Z2 invariant $\\nu_Q$",
-                    "gap": "$Direct band gap \\Delta E$",
-                    "spin_gap": "Minimum spin \\Delta |S|"}[key])
+                    "gap": "Direct band gap $\\Delta E$",
+                    "spin_gap": "Minimum spin $\\Delta |S|$"}[key])
             
             fig.savefig("_".join([self.model.param_x, self.model.param_y, key]) + ".png", dpi=600)
             plt.close(fig)
