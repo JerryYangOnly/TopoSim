@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import multiprocessing as mp
 import typing
+import copy
 
 from .model import *
 from .bulk import Simulator
@@ -12,7 +13,7 @@ from .bulk import Simulator
 class ModelWrapper:
     def __init__(self, model: type(Model), param_x: str, param_y: str):
         self.model = model
-        self.parameters = self.model.defaults
+        self.parameters = copy.deepcopy(self.model.defaults)
         if param_x not in self.parameters:
             raise ValueError("Requested parameter `" + param_x + "` is not accepted by model `" + self.model.name + "`.")
         if param_y not in self.parameters:
