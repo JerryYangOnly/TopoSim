@@ -195,7 +195,7 @@ class PhaseDiagram:
                     "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$"}[key])
             count += 1
 
-        fig.tight_layout()
         fig.suptitle(self.title)
+        fig.tight_layout()
         fig.savefig("_".join([self.model.param_x, self.model.param_y]) + ".png", dpi=600)
         plt.close(fig)
