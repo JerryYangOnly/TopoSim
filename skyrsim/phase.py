@@ -3,8 +3,9 @@ import scipy
 import scipy.linalg
 import matplotlib.pyplot as plt
 
-import multiprocessing
+import multiprocessing as mp
 import typing
+import copy
 
 from .model import *
 from .bulk import Simulator
@@ -12,7 +13,7 @@ from .bulk import Simulator
 class ModelWrapper:
     def __init__(self, model: type(Model), param_x: str, param_y: str):
         self.model = model
-        self.parameters = self.model.defaults
+        self.parameters = copy.deepcopy(self.model.defaults)
         if param_x not in self.parameters:
             raise ValueError("Requested parameter `" + param_x + "` is not accepted by model `" + self.model.name + "`.")
         if param_y not in self.parameters:
@@ -93,14 +94,16 @@ class PhaseDiagram:
         if self.z2:
             res.append(sim.compute_z2(self.filled_bands))
         if self.skyr_z2:
-            res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands))
+            res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands, SOC=False))
         if self.gap:
             res.append(sim.direct_band_gap(self.filled_bands))
         if self.spin_gap:
             res.append(sim.minimum_spin_gap(self.filled_bands))
         return tuple(res)
 
-    def generate(self, invar: list, max_cpu: int=0) -> None:
+    def generate(self, invar: list = [], max_cpu: int=0) -> None:
+        if invar == []:
+            invar = ["chern", "skyr", "gap", "spin_gap"]
         if max_cpu == 0:
             max_cpu = mp.cpu_count() // 2
 
@@ -155,12 +158,12 @@ class PhaseDiagram:
             if isinstance(title, dict):
                 ax.set_title(title[key])
             elif title is True:
-                ax.set_title({"chern": "Chern number$\\mathcal{C}$",
+                ax.set_title({"chern": "Chern number $\\mathcal{C}$",
                     "skyr": "Skyrmion number $\\mathcal{Q}$",
                     "z2": "Z2 invariant $\\nu$",
                     "skyr_z2": "Skyrmion Z2 invariant $\\nu_Q$",
-                    "gap": "$Direct band gap \\Delta E$",
-                    "spin_gap": "Minimum spin \\Delta |S|"}[key])
+                    "gap": "Direct band gap $\\Delta E$",
+                    "spin_gap": "Minimum spin $\\Delta |S|$"}[key])
             
             fig.savefig("_".join([self.model.param_x, self.model.param_y, key]) + ".png", dpi=600)
             plt.close(fig)
