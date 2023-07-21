@@ -156,7 +156,7 @@ class PhaseDiagram:
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
             extent = [self.xlim[0] - dx/2, self.xlim[-1] + dx/2, self.ylim[0] - dy/2, self.ylim[-1] + dy/2]
-            aspect = self.xlim.shape[0] / self.ylim.shape[0]
+            aspect = (extent[1] - extent[0]) / (extent[3] - extent[2])
             pos = ax.imshow(self.result[key], aspect=aspect, extent=extent, origin="lower")
             cb = fig.colorbar(pos, ax=ax)
             ax.set_xlabel(self.xlabel)
@@ -195,7 +195,7 @@ class PhaseDiagram:
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
             extent = [self.xlim[0] - dx/2, self.xlim[-1] + dx/2, self.ylim[0] - dy/2, self.ylim[-1] + dy/2]
-            aspect = self.xlim.shape[0] / self.ylim.shape[0]
+            aspect = (extent[1] - extent[0]) / (extent[3] - extent[2])
             pos = sax.imshow(self.result[key], aspect=aspect, extent=extent, origin="lower")
             cb = fig.colorbar(pos, ax=sax)
             sax.set_xlabel(self.xlabel)
