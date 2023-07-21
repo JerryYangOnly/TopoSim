@@ -33,7 +33,9 @@ class ModelWrapper:
 
     def set_func(self, param: str, func: callable) -> None:
         """The argument `func` should accept two inputs, `x` and `y`,
-        and return the value of parameter `param` at the point specified."""
+        and return the value of parameter `param` at the point specified.
+        Warning: function must be pickleable; in particular,
+        lambda functions are not acceptable."""
         if param == self.param_x or param == self.param_y:
             raise ValueError("Parameter `" + param + "` is an independent variable.")
         if param not in self.parameters:
@@ -42,7 +44,7 @@ class ModelWrapper:
         self.func_parameters[param] = func
 
     def __call__(self, x, y) -> Model:
-        return self.model({**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
+        return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
 
 
 class PhaseDiagram:
@@ -154,7 +156,7 @@ class PhaseDiagram:
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
             extent = [self.xlim[0] - dx/2, self.xlim[-1] + dx/2, self.ylim[0] - dy/2, self.ylim[-1] + dy/2]
-            aspect = self.xlim.shape[0] / self.ylim.shape[0]
+            aspect = (extent[1] - extent[0]) / (extent[3] - extent[2])
             pos = ax.imshow(self.result[key], aspect=aspect, extent=extent, origin="lower")
             cb = fig.colorbar(pos, ax=ax)
             ax.set_xlabel(self.xlabel)
@@ -193,7 +195,7 @@ class PhaseDiagram:
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
             extent = [self.xlim[0] - dx/2, self.xlim[-1] + dx/2, self.ylim[0] - dy/2, self.ylim[-1] + dy/2]
-            aspect = self.xlim.shape[0] / self.ylim.shape[0]
+            aspect = (extent[1] - extent[0]) / (extent[3] - extent[2])
             pos = sax.imshow(self.result[key], aspect=aspect, extent=extent, origin="lower")
             cb = fig.colorbar(pos, ax=sax)
             sax.set_xlabel(self.xlabel)

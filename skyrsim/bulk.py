@@ -314,7 +314,14 @@ class Simulator:
             self.set_spin_op(sop2)
             v -= self.compute_skyrmion(filled_bands)
             self.spin_evaluated = 0
-            return (v / 2) %2
+
+            def _smooth_round(vf, threshold=1e-4):
+                rvf = np.round(vf)
+                pos = np.abs(rvf - vf) > threshold
+                rvf[pos] = vf[pos]
+                return rvf
+
+            return (_smooth_round(v) / 2) % 2
         else:
             raise NotImplementedError
 
