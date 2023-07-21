@@ -42,7 +42,7 @@ class ModelWrapper:
         self.func_parameters[param] = func
 
     def __call__(self, x, y) -> Model:
-        return self.model({**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
+        return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
 
 
 class PhaseDiagram:
