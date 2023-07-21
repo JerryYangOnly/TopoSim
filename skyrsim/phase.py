@@ -22,6 +22,7 @@ class ModelWrapper:
         self.param_y = param_y
         self.parameters.pop(self.param_x)
         self.parameters.pop(self.param_y)
+        self.func_parameters = {}
 
     def set_value(self, param: str, value) -> None:
         if param == self.param_x or param == self.param_y:
@@ -30,8 +31,18 @@ class ModelWrapper:
             raise ValueError("Requested parameter `" + param + "` is not accepted by model `" + self.model.name + "`.")
         self.parameters[param] = value
 
+    def set_func(self, param: str, func: callable) -> None:
+        """The argument `func` should accept two inputs, `x` and `y`,
+        and return the value of parameter `param` at the point specified."""
+        if param == self.param_x or param == self.param_y:
+            raise ValueError("Parameter `" + param + "` is an independent variable.")
+        if param not in self.parameters:
+            raise ValueError("Requested parameter `" + param + "` is not accepted by model `" + self.model.name + "`.")
+        self.parameters.pop(param)
+        self.func_parameters[param] = func
+
     def __call__(self, x, y) -> Model:
-        return self.model({**self.parameters, self.param_x: x, self.param_y: y})
+        return self.model({**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
 
 
 class PhaseDiagram:
