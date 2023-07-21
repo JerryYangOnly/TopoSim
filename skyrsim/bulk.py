@@ -317,9 +317,10 @@ class Simulator:
 
             def _smooth_round(vf, threshold=1e-4):
                 rvf = np.round(vf)
-                pos = np.abs(rvf - vf) > threshold
-                rvf[pos] = vf[pos]
-                return rvf
+                if np.abs(rvf - vf) > threshold:
+                    return vf
+                else:
+                    return rvf
 
             return (_smooth_round(v) / 2) % 2
         else:
