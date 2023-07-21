@@ -33,7 +33,9 @@ class ModelWrapper:
 
     def set_func(self, param: str, func: callable) -> None:
         """The argument `func` should accept two inputs, `x` and `y`,
-        and return the value of parameter `param` at the point specified."""
+        and return the value of parameter `param` at the point specified.
+        Warning: function must be pickleable; in particular,
+        lambda functions are not acceptable."""
         if param == self.param_x or param == self.param_y:
             raise ValueError("Parameter `" + param + "` is an independent variable.")
         if param not in self.parameters:
