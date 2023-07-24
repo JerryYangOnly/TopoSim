@@ -3,8 +3,9 @@ import scipy
 import scipy.linalg
 import matplotlib.pyplot as plt
 
-from .bulk import Simulator
+from .common import *
 from .model import *
+from .bulk import Simulator
 
 class EdgeSimulator(Simulator):
     def __init__(self, model: Model, points: int):
