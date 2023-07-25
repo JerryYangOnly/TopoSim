@@ -2,13 +2,7 @@ import numpy as np
 import scipy
 import scipy.linalg
 
-# Define Pauli matrices for later use
-pauli = [0] * 4
-pauli[0] = np.eye(2)
-pauli[1] = np.array([[0, 1], [1, 0]])
-pauli[2] = np.array([[0, -1j], [1j, 0]])
-pauli[3] = np.array([[1, 0], [0, -1]])
-pauli = np.array(pauli)
+from .common import *
 
 # Define generic base class for models
 class Model:
