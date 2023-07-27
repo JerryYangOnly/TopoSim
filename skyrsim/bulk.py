@@ -215,12 +215,24 @@ class Simulator:
         
         return ((W - Q) / 2 / np.pi) % 2
 
-    def _z2_wcc(self, filled_bands, wl_density=100):
-        x = np.zeros((wl_density, filled_bands))
-        g = np.zeros(wl_density)
+    def _z2_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
+        if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
+            x = np.zeros((wl_density, filled_bands))
+            g = np.zeros(wl_density)
 
-        for i, ky in zip(range(wl_density), np.linspace(0, np.pi, wl_density)):
-            x[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands, phases=True) / 2 / np.pi
+            for i, ky in zip(range(wl_density), np.linspace(0, np.pi, wl_density)):
+                if axis == 0:
+                    x[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+                else:
+                    x[i] = self.wilson_loop(lambda x: (ky, (x - 1/2) * 2 * np.pi), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+        else:
+            wl_density = self.mesh_points - 1
+            x = np.zeros((wl_density, filled_bands))
+            g = np.zeros(wl_density)
+
+            for i in range(wl_density):
+                x[i] = self._wilson_loop_grid((0, i), axis=axis, filled_bands=filled_bands) / 2 / np.pi
+
         x -= np.floor(x)
 
         for i in range(wl_density):
@@ -253,12 +265,33 @@ class Simulator:
             if p == 0.0:
                 origin = v[:, :filled_bands]
             else:
-                P = sum([np.outer(v[:, i], np.conj(v[:, i])) for i in range(filled_bands)])
-                W = P @ W
+                # P = sum([np.outer(v[:, i], np.conj(v[:, i])) for i in range(filled_bands)])
+                # W = P @ W
+                W = v[:, :filled_bands] @ v[:, :filled_bands].conj().T @ W
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(W)[0]))# np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
+    def _wilson_loop_grid(self, index, axis=0, filled_bands=None):
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        W = np.eye(self.model.bands, dtype=np.complex64)
+        origin = None
+
+        index = np.array(index)
+        for i in range(self.mesh_points - 1):
+            index[axis] = i
+            v = self.states
+            for j in index:
+                v = v[j]
+            v = v[:, :filled_bands]
+
+            if i == 0:
+                origin = self.states[index]
+            else:
+                W = v @ v.conj().T @ W
+        W = np.conj(origin).T @ W @ origin
+        return np.sort(np.angle(scipy.linalg.eig(W)[0]))
     
+
     def set_spin_op(self, S):
         self.S = S
         self.spin_evaluated = 0
