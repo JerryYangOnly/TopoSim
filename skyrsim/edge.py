@@ -206,7 +206,7 @@ class EdgeSimulator(Simulator):
         if not close_fig:
             return figs
 
-    def entanglement_spectrum(self, filled_bands=None, op: np.ndarray=None, trace: callable=None):
+    def entanglement_spectrum(self, filled_bands=None, a_half=True, op: np.ndarray=None, trace: callable=None):
         if self.eff_dim != 1:
             print("Entanglement spectra is only supported in 1-D.")
             return
@@ -225,19 +225,24 @@ class EdgeSimulator(Simulator):
             proj = op @ self.states[..., :, :filled_bands] @ np.swapaxes(np.conj(self.states[..., :, :filled_bands]), -1, -2) @ np.conj(op).T
         
         N = proj.shape[-1] // 2
-        proj = proj[..., :N, :N]
+
+        if a_half:
+            proj = proj[..., :N, :N]
+        else:
+            proj = proj[..., N:, N:]
+        
         if trace is not None:
             proj = trace(proj)
         w, _ = np.linalg.eigh(proj)
         return w
     
-    def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=True, save_fig="", op=None, trace: callable=None):
-        w = self.entanglement_spectrum(filled_bands, op=op, trace=trace)
+    def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=True, save_fig="", a_half=True, op=None, trace: callable=None):
+        w = self.entanglement_spectrum(filled_bands, a_half=a_half, op=op, trace=trace)
 
         fig = plt.figure()
         ax = fig.gca()
         for i in range(w.shape[1]):
-            ax.plot(self.mesh, w[:, i], "ko")
+            ax.plot(self.mesh, w[:, i], "ko", markersize=3)
 
         dims = [i for i in range(self.model.dim) if i not in self.open_dim]
         dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
