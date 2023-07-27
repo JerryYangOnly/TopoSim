@@ -139,10 +139,21 @@ class Simulator:
         Q = np.sum(F) / 2.0 / np.pi
         return Q
     
-    def _chern_wcc(self, filled_bands, wl_density=100):
-        p = np.zeros((wl_density, filled_bands))
-        for i, ky in zip(range(wl_density), np.linspace(-np.pi, np.pi, wl_density)):
-            p[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands, phases=True) / 2 / np.pi
+    def _chern_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
+        if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
+            p = np.zeros((wl_density, filled_bands))
+
+            for i, ky in zip(range(wl_density), np.linspace(-np.pi, np.pi, wl_density)):
+                if axis == 0:
+                    p[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+                else:
+                    p[i] = self.wilson_loop(lambda x: (ky, (x - 1/2) * 2 * np.pi), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+        else:
+            wl_density = self.mesh_points - 1
+            p = np.zeros((wl_density, filled_bands))
+
+            for i in range(wl_density):
+                p[i] = self._wilson_loop_grid((0, i) if axis == 0 else (i, 0), filled_bands=filled_bands, axis=axis) / 2 / np.pi
         
         p = np.sum(p, axis=1)
         p -= np.floor(p)
@@ -216,9 +227,8 @@ class Simulator:
         return ((W - Q) / 2 / np.pi) % 2
 
     def _z2_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
-        if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
+        if self.mesh_points % 2 == 0 or (wl_density >= self.mesh_points // 2 + 1) or not self.evaluated or force_density:
             x = np.zeros((wl_density, filled_bands))
-            g = np.zeros(wl_density)
 
             for i, ky in zip(range(wl_density), np.linspace(0, np.pi, wl_density)):
                 if axis == 0:
@@ -226,13 +236,13 @@ class Simulator:
                 else:
                     x[i] = self.wilson_loop(lambda x: (ky, (x - 1/2) * 2 * np.pi), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
         else:
-            wl_density = self.mesh_points - 1
+            wl_density = self.mesh_points // 2 + 1
             x = np.zeros((wl_density, filled_bands))
-            g = np.zeros(wl_density)
 
             for i in range(wl_density):
-                x[i] = self._wilson_loop_grid((0, i), axis=axis, filled_bands=filled_bands) / 2 / np.pi
+                x[i] = self._wilson_loop_grid((0, i) if axis == 0 else (i, 0), filled_bands=filled_bands, axis=axis) / 2 / np.pi
 
+        g = np.zeros(wl_density)
         x -= np.floor(x)
 
         for i in range(wl_density):
@@ -271,8 +281,7 @@ class Simulator:
         W = np.conj(origin).T @ W @ origin
         return W if not phases else np.sort(np.angle(scipy.linalg.eig(W)[0]))# np.sort(np.angle(scipy.linalg.eig(self.wilson_loop(loop, points, filled_bands))[0]))
 
-    def _wilson_loop_grid(self, index, axis=0, filled_bands=None):
-        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+    def _wilson_loop_grid(self, index, filled_bands, axis=0):
         W = np.eye(self.model.bands, dtype=np.complex64)
         origin = None
 
@@ -285,7 +294,7 @@ class Simulator:
             v = v[:, :filled_bands]
 
             if i == 0:
-                origin = self.states[index]
+                origin = v
             else:
                 W = v @ v.conj().T @ W
         W = np.conj(origin).T @ W @ origin
