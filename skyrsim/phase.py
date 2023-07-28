@@ -190,12 +190,16 @@ class PhaseDiagram:
         if invar == []:
             invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap", "ind_gap"]
 
+        if len(set(self.result) & set(invar)) > np.prod(shape):
+            raise ValueError("Shape %s provided is insufficient for %d plots." % (str(shape), len(set(self.result) & set(invar))))
+
         fig, ax = plt.subplots(*shape)
         count = 0
         
         for key in self.result:
             if key not in invar:
                 continue
+            
             sax = ax[count // shape[1], count % shape[1]]
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
