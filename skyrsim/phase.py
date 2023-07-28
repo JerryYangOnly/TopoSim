@@ -79,7 +79,7 @@ class PhaseDiagram:
         self.S = None
         self.filled_bands = None
 
-        self.chern = self.skyr = self.z2 = self.skyr_z2 = self.gap = self.spin_gap = False
+        self.chern = self.skyr = self.z2 = self.skyr_z2 = self.gap = self.spin_gap = self.ind_gap = False
         self.result = {}
 
     def set_xlabel(self, label: str) -> None:
@@ -113,6 +113,8 @@ class PhaseDiagram:
             res.append(sim.direct_band_gap(self.filled_bands))
         if self.spin_gap:
             res.append(sim.minimum_spin_gap(self.filled_bands))
+        if self.ind_gap:
+            res.append(sim.has_indirect_band_gap(self.filled_bands))
         return tuple(res)
 
     def generate(self, invar: list = [], max_cpu: int=0) -> None:
@@ -121,13 +123,14 @@ class PhaseDiagram:
         if max_cpu == 0:
             max_cpu = mp.cpu_count() // 2
 
-        invar = [s for s in invar if s in ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]]
+        invar = [s for s in invar if s in ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap", "ind_gap"]]
         self.chern = "chern" in invar
         self.skyr = "skyr" in invar
         self.z2 = "z2" in invar
         self.skyr_z2 = "skyr_z2" in invar
         self.gap = "gap" in invar
         self.spin_gap = "spin_gap" in invar
+        self.ind_gap = "ind_gap" in invar
         
         if (self.skyr or self.skyr_z2 or self.spin_gap) and self.S is None:
             raise ValueError("Spin related quantities cannot be evaluated with a spin operator set.")
@@ -147,7 +150,7 @@ class PhaseDiagram:
 
     def plot(self, invar: list = [], label: typing.Union[bool, dict] = True, title: typing.Union[bool, dict] = False) -> None:
         if invar == []:
-            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
+            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap", "ind_gap"]
 
         for key in self.result:
             if key not in invar:
@@ -167,7 +170,7 @@ class PhaseDiagram:
                 cb.set_label(label[key])
             elif label is True:
                 cb.set_label({"chern": "$\\mathcal{C}$", "skyr": "$\\mathcal{Q}$", "z2": "$\\nu$",
-                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$"}[key])
+                              "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$", "ind_gap": "$\\Delta E_{in}$"}[key])
 
             if isinstance(title, dict):
                 ax.set_title(title[key])
@@ -177,22 +180,23 @@ class PhaseDiagram:
                     "z2": "Z2 invariant $\\nu$",
                     "skyr_z2": "Skyrmion Z2 invariant $\\nu_Q$",
                     "gap": "Direct band gap $\\Delta E$",
-                    "spin_gap": "Minimum spin $\\Delta |S|$"}[key])
+                    "spin_gap": "Minimum spin $\\Delta |S|$",
+                    "ind_gap": "Indirect band gap $\\Delta E_{in}$"}[key])
             
             fig.savefig("_".join([self.model.param_x, self.model.param_y, key]) + ".png", dpi=600)
             plt.close(fig)
 
     def subplots(self, shape: tuple, invar: list = [], label: typing.Union[bool, dict] = True) -> None:
         if invar == []:
-            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap"]
+            invar = ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap", "ind_gap"]
 
         fig, ax = plt.subplots(*shape)
         count = 0
         
         for key in self.result:
-            sax = ax[count // shape[1], count % shape[1]]
             if key not in invar:
                 continue
+            sax = ax[count // shape[1], count % shape[1]]
             dx = (self.xlim[-1] - self.xlim[0]) / (self.xlim.shape[0] - 1)
             dy = (self.ylim[-1] - self.ylim[0]) / (self.ylim.shape[0] - 1)
             extent = [self.xlim[0] - dx/2, self.xlim[-1] + dx/2, self.ylim[0] - dy/2, self.ylim[-1] + dy/2]
@@ -206,9 +210,13 @@ class PhaseDiagram:
                 cb.set_label(label[key])
             elif label is True:
                 cb.set_label({"chern": "$\\mathcal{C}$", "skyr": "$\\mathcal{Q}$", "z2": "$\\nu$",
-                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$"}[key])
+                    "skyr_z2": "$\\nu_Q$", "gap": "$\\Delta E$", "spin_gap": "$\\Delta |S|$", "ind_gap": "$\\Delta E_{in}$"}[key])
             count += 1
 
+        while count < np.prod(shape):
+            ax[count // shape[1], count % shape[1]].axis("off")
+            count += 1
+            
         fig.suptitle(self.title)
         fig.tight_layout()
         fig.savefig("_".join([self.model.param_x, self.model.param_y]) + ".png", dpi=600)

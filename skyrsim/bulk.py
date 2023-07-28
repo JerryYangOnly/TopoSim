@@ -55,6 +55,15 @@ class Simulator:
             filled_bands = self.model.bands // 2    # Default to half-filling
         return np.min(self.band[:, :, filled_bands] - self.band[:, :, filled_bands - 1])
 
+    def indirect_band_gap(self, filled_bands=None):
+        if not self.evaluated:
+            self.populate_mesh()
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        return np.min(self.band[:, :, filled_bands]) - np.max(self.band[:, :, filled_bands - 1])
+
+    def has_indirect_band_gap(self, filled_bands=None):
+        return np.heaviside(self.indirect_band_gap(filled_bands), 0.0)
+
     def plot_band(self, filled_bands=None, full=False, pi_ticks=True, close_fig=True, save_fig=""):
         if not self.evaluated:
             self.populate_mesh()
