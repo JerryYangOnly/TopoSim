@@ -159,3 +159,17 @@ class FourBandModel(Model):
         assert k.shape == (self.dim,)
         return np.kron(pauli[3], (1 - np.sum(np.cos(k))) * pauli[3] + self.parameters["k"] * np.sin(k[1]) * pauli[1]) + np.kron(pauli[0], self.parameters["b"] * np.sin(k[0]) * pauli[2])
         
+class TripletSticletModel(Model):
+    name = "Sticlet Model"
+    dim = 2
+    bands = 4
+    defaults = {"a": 0.0, "b": 0.0, "D0": 0.0}
+    required = ["a", "b"]
+
+    def hamiltonian(self, k):
+        hamil = self.parameters["a"] * np.cos(k[0]) * np.kron(pauli[3], pauli[1])
+        hamil += self.parameters["a"] * np.cos(k[1]) * np.kron(pauli[0], pauli[2])
+        hamil += self.parameters["b"] * np.cos(k[0] + k[1]) * np.kron(pauli[3], pauli[3])
+        hamil[:2, 2:] = 1j * self.parameters["D0"] * (np.sin(k[1]) * 1j * pauli[3] - np.sin(k[0]) * pauli[0])
+        hamil[2:, :2] = hamil[:2, 2:].conj().T
+        return hamil
