@@ -126,7 +126,7 @@ class Simulator:
             print("Band plotting of models in %d-D is not supported." % self.model.dim)
 
 
-    def compute_chern(self, filled_bands=None, method="hwcc", **kwargs):
+    def compute_chern(self, filled_bands=None, method="hatsugai", **kwargs):
         if self.model.dim != 2:
             print("Computation of Chern numbers is only supported in 2-D.")
             return
@@ -344,13 +344,21 @@ class Simulator:
             return
         self.populate_spin(filled_bands)
 
+        spin = self.normalized_spin()
         # Normalize the spin for the computation
-        expt = np.concatenate((np.zeros((self.mesh_points, self.mesh_points, 1)), self.normalized_spin()), axis=2)
-        
-        lat = lambda k: np.round((np.array(k) + np.pi) / (2 * np.pi / (self.mesh_points - 1))).astype(int)
-        model = TwoBandModel(d=lambda k: expt[tuple(lat(k))])
-        sim = Simulator(model, self.mesh_points)
-        return sim.compute_chern()
+        hamil = np.zeros((self.mesh_points, self.mesh_points, 2, 2), dtype=np.complex64)
+        for i in range(3):
+            hamil += pauli[i + 1] * spin[..., i, np.newaxis, np.newaxis]
+
+        bands, states = np.linalg.eigh(hamil)
+        Q = 0.0
+        F = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
+        F = F @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
+        F = F @ (np.conj(states[1:, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, 1:, :, :1])
+        F = F @ (np.conj(states[:-1, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, :-1, :, :1])
+        F = np.angle(np.linalg.det(F))
+        Q = np.sum(F) / 2.0 / np.pi
+        return Q
 
     def compute_skyrmion_z2(self, Ss, filled_bands=None, SOC=True):
         if self.model.dim != 2:
