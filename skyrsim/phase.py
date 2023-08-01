@@ -49,12 +49,10 @@ class ModelWrapper:
         if y is None:
             if self.param_y:
                 raise ValueError("y coordinate not specified.")
-            x = args[0]
             return self.model(**{**self.parameters, self.param_x: x, **{param: func(x) for param, func in self.func_parameters.items()}})
         else:
             if not self.param_y:
                 raise ValueError("y coordinate not required.")
-            x, y = args
             return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
         
 
