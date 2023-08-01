@@ -45,19 +45,17 @@ class ModelWrapper:
         self.parameters.pop(param)
         self.func_parameters[param] = func
 
-    def __call__(self, *args) -> Model:
-        if len(args) == 1:
+    def __call__(self, x, y=None) -> Model:
+        if y is None:
             if self.param_y:
                 raise ValueError("y coordinate not specified.")
             x = args[0]
             return self.model(**{**self.parameters, self.param_x: x, **{param: func(x) for param, func in self.func_parameters.items()}})
-        elif len(args) == 2:
+        else:
             if not self.param_y:
                 raise ValueError("y coordinate not required.")
             x, y = args
             return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
-        else:
-            raise ValueError("Too many arguments provided.")
         
 
 class PhaseDiagram:
