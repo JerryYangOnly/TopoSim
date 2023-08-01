@@ -12,17 +12,18 @@ from .model import *
 from .bulk import Simulator
 
 class ModelWrapper:
-    def __init__(self, model: typing.Type[Model], param_x: str, param_y: str):
+    def __init__(self, model: typing.Type[Model], param_x: str, param_y: str = ""):
         self.model = model
         self.parameters = copy.deepcopy(self.model.defaults)
         if param_x not in self.parameters:
             raise ValueError("Requested parameter `" + param_x + "` is not accepted by model `" + self.model.name + "`.")
-        if param_y not in self.parameters:
+        if param_y and param_y not in self.parameters:
             raise ValueError("Requested parameter `" + param_y + "` is not accepted by model `" + self.model.name + "`.")
         self.param_x = param_x
         self.param_y = param_y
         self.parameters.pop(self.param_x)
-        self.parameters.pop(self.param_y)
+        if param_y:
+            self.parameters.pop(self.param_y)
         self.func_parameters = {}
 
     def set_value(self, param: str, value) -> None:
@@ -44,9 +45,20 @@ class ModelWrapper:
         self.parameters.pop(param)
         self.func_parameters[param] = func
 
-    def __call__(self, x, y) -> Model:
-        return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
-
+    def __call__(self, *args) -> Model:
+        if len(args) == 1:
+            if self.param_y:
+                raise ValueError("y coordinate not specified.")
+            x = args[0]
+            return self.model(**{**self.parameters, self.param_x: x, **{param: func(x) for param, func in self.func_parameters.items()}})
+        elif len(args) == 2:
+            if not self.param_y:
+                raise ValueError("y coordinate not required.")
+            x, y = args
+            return self.model(**{**self.parameters, self.param_x: x, self.param_y: y, **{param: func(x, y) for param, func in self.func_parameters.items()}})
+        else:
+            raise ValueError("Too many arguments provided.")
+        
 
 class PhaseDiagram:
     def __init__(self, model: ModelWrapper, xlim: typing.Union[tuple, np.ndarray],
