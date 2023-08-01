@@ -3,3 +3,4 @@ from .model import Model, Potential, QWZModel, BHZModel, TwoBandModel, FourBandM
 from .bulk import Simulator
 from .edge import EdgeSimulator
 from .phase import ModelWrapper, PhaseDiagram
+from .animate import SpectrumAnimator
