@@ -174,16 +174,15 @@ class Simulator:
 
     def compute_z2(self, filled_bands=None, SOC=True, method="hwcc", **kwargs):
         if self.model.dim != 2:
-            print("Computation of Z2 invariant is only supported in 2-D.")
-            return
+            raise ValueError("Computation of Z2 invariant is only supported in 2-D")
 
         if not filled_bands:
             filled_bands = self.model.bands // 2
 
         if not SOC:
             if filled_bands and filled_bands % 2 == 1:
-                print("Error: filled_bands cannot be odd in Z2 computation!")
-                return -1
+                raise ValueError("`filled_bands` cannot be odd in Z2 computation")
+
             model_s1 = Model()
             model_s2 = Model()
             model_s1.hamiltonian = lambda k: self.model.hamiltonian(k)[:self.model.bands // 2, :self.model.bands // 2]
@@ -200,6 +199,8 @@ class Simulator:
                 return self._z2_fu_kane(filled_bands)
             elif method == "hwcc":
                 return self._z2_wcc(filled_bands, **kwargs)
+            else:
+                raise AttributeError("`method` %s is not available" % method)
 
     def _z2_fu_kane(self, filled_bands):
         # Method of Fu and Kane
@@ -334,7 +335,7 @@ class Simulator:
         s[s == 0] = np.finfo(np.float32).eps
         return self.spin / s
 
-    def compute_skyrmion(self, filled_bands=None):
+    def compute_skyrmion(self, filled_bands=None, method="hatsugai"):
         """S has shape (3, bands, bands).
         """
         if self.S is None:
@@ -350,24 +351,27 @@ class Simulator:
         for i in range(3):
             hamil += pauli[i + 1] * spin[..., i, np.newaxis, np.newaxis]
 
-        bands, states = np.linalg.eigh(hamil)
-        Q = 0.0
-        F = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
-        F = F @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
-        F = F @ (np.conj(states[1:, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, 1:, :, :1])
-        F = F @ (np.conj(states[:-1, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, :-1, :, :1])
-        F = np.angle(np.linalg.det(F))
-        Q = np.sum(F) / 2.0 / np.pi
-        return Q
+        if method == "hatsugai":
+            _, states = np.linalg.eigh(hamil)
+            Q = 0.0
+            F = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
+            F = F @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
+            F = F @ (np.conj(states[1:, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, 1:, :, :1])
+            F = F @ (np.conj(states[:-1, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, :-1, :, :1])
+            F = np.angle(np.linalg.det(F))
+            Q = np.sum(F) / 2.0 / np.pi
+            return Q
+        elif method == "integral":
+            return -np.sum(spin * np.cross(np.gradient(spin, axis=0), np.gradient(spin, axis=1))) / 4 / np.pi
+        else:
+            raise AttributeError("`method` %s is not available" % method)
 
     def compute_skyrmion_z2(self, Ss, filled_bands=None, SOC=True):
         if self.model.dim != 2:
-            print("Computation of skyrmion Z2 invariant is only supported in 2-D.")
-            return
+            raise ValueError("Computation of skyrmion Z2 invariant is only supported in 2-D")
         if not SOC:
             if filled_bands and filled_bands % 2 == 1:
-                print("Error: filled_bands cannot be odd in Z2 computation!")
-                return -1
+                raise ValueError("`filled_bands` cannot be odd in Z2 computation")
             sop1 = np.kron(np.array([[1, 0], [0, 0]]), Ss)
             sop2 = np.kron(np.array([[0, 0], [0, 1]]), Ss)
             self.set_spin_op(sop1)
