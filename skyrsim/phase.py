@@ -89,6 +89,10 @@ class PhaseDiagram:
 
         self.chern = self.skyr = self.z2 = self.skyr_z2 = self.gap = self.spin_gap = self.ind_gap = False
         self.result = {}
+        
+        self.chern_method = "hatsugai"          # TODO: setters if necessary?
+        self.z2_method = "hwcc"
+        self.skym_method = "hatsugai"
 
     def set_xlabel(self, label: str) -> None:
         self.xlabel = label
@@ -110,11 +114,11 @@ class PhaseDiagram:
         sim.set_spin_op(self.S)
         res = []
         if self.chern:
-            res.append(sim.compute_chern(self.filled_bands))
+            res.append(sim.compute_chern(self.filled_bands, method=self.chern_method))
         if self.skyr:
-            res.append(sim.compute_skyrmion(self.filled_bands))
+            res.append(sim.compute_skyrmion(self.filled_bands, method=self.skyr_method))
         if self.z2:
-            res.append(sim.compute_z2(self.filled_bands))
+            res.append(sim.compute_z2(self.filled_bands, method=self.z2_method))
         if self.skyr_z2:
             res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands, SOC=False))
         if self.gap:
