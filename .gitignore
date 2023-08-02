@@ -9,6 +9,8 @@ __pycache__/
 # Raw data produced
 *.npy
 *.npz
+*.png
+*.gif
 
 # Distribution / packaging
 .Python
