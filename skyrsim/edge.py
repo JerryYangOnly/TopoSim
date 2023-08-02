@@ -36,6 +36,8 @@ class EdgeSimulator(Simulator):
         if self.evaluated:
             return
 
+        self.band = self.band.reshape(self.mesh_points**self.eff_dim, self.eff_bands)
+        self.states = self.states.reshape(self.mesh_points**self.eff_dim, self.eff_bands, self.eff_bands)
         for i in range(self.mesh_points**self.eff_dim):
             idx = [0] * self.model.dim
             k = i
