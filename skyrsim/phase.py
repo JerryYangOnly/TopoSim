@@ -92,7 +92,7 @@ class PhaseDiagram:
         
         self.chern_method = "hatsugai"          # TODO: setters if necessary?
         self.z2_method = "hwcc"
-        self.skym_method = "hatsugai"
+        self.skyr_method = "hatsugai"
 
     def set_xlabel(self, label: str) -> None:
         self.xlabel = label
