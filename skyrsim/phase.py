@@ -151,8 +151,12 @@ class PhaseDiagram:
         with mp.Pool(max_cpu) as pool:
             result = pool.starmap(self._compute, zip(X.flatten(), Y.flatten()))
         result = np.array(result).T
-        for i in range(len(invar)):
-            self.result[invar[i]] = result[i].reshape(self.xlim.shape[0], self.ylim.shape[0])
+
+        count = 0
+        for i in ["chern", "skyr", "z2", "skyr_z2", "gap", "spin_gap", "ind_gap"]:
+            if i in invar:
+                self.result[i] = result[count].reshape(self.xlim.shape[0], self.ylim.shape[0])
+                count += 1
 
     def save(self, filename: str) -> None:
         np.savez(filename, **self.result)
