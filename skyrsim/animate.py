@@ -59,7 +59,7 @@ class SpectrumAnimator:
         #     raise AttributeError("Size of the open system is not set.")
         
 
-    def plot(self, filename):
+    def plot(self, filename, title=""):
         fig = plt.figure()
         ax = fig.gca()
 
@@ -69,6 +69,8 @@ class SpectrumAnimator:
         dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
         ax.set_xlabel("$k_{" + dim_labels(self.open) + "}$")
         ax.set_ylabel("$E$")
+        if title:
+            ax.set_title(title)
 
         lines = [0] * self.bands.shape[-1]
         for i in range(self.bands.shape[-1]):
@@ -82,6 +84,7 @@ class SpectrumAnimator:
         def plot_frame(frame):
             for i in range(self.bands.shape[-1]):
                 lines[i].set_data(self.mesh, self.bands[frame, :, i])
+            ax.set_title(title % self.xlim[frame])
             return lines
 
         a = anim.FuncAnimation(fig, plot_frame, init_func=init_plot, frames=len(self.xlim), interval=200, blit=False)
