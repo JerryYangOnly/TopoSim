@@ -208,6 +208,52 @@ class EdgeSimulator(Simulator):
         if not close_fig:
             return figs
 
+    def spin_heat_map_band(self, band, pi_ticks=True, close_fig=True, save_fig=""):
+        """Sums over the bands for the spin expectation value."""
+        if self.eff_dim != 1 or len(self.open_dim) != 1:
+            print("Dimension of the model is not supported. Are boundaries opened correctly?")
+            return
+        if self.S is None:
+            return
+        if not self.evaluated:
+            self.populate_mesh()
+
+        if not isinstance(band, (list, tuple, np.ndarray)):
+            bands = [band]
+        else:
+            bands = band
+        
+        states = [self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands)) for band in bands]
+        spin = [np.sum(np.dot(S, state.transpose((0, 2, 1))) * state.conj().transpose(0, 2, 1), axis=2) for state in states]
+        spin = sum(spin)
+
+        figs = []
+        for i in range(3):
+            fig = plt.figure()
+            # ax = fig.gca(projection="3d")
+            ax = fig.gca()
+
+            ax.imshow(spin[i], aspect=2 * np.pi / np.prod(self.N[self.open_dim]), extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])), origin="lower")
+            ax.set_xlabel("Momentum")
+            ax.set_ylabel("Site")
+            ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands).astype(int) + 1)))
+
+            if pi_ticks:
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            if save_fig:
+                if save_fig.endswith(".png"):
+                    fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                else:
+                    fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+            else:
+                plt.show()
+            if close_fig:
+                plt.close(fig)
+            else:
+                figs.append(fig)
+        if not close_fig:
+            return figs
+
     def entanglement_spectrum(self, filled_bands=None, a_half=True, op: np.ndarray=None, trace: callable=None):
         if self.eff_dim != 1:
             print("Entanglement spectra is only supported in 1-D.")
