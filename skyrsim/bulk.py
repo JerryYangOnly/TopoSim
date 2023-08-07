@@ -38,6 +38,13 @@ class Simulator:
             self.states[i, :, :] = v
         self.band = self.band.reshape((*([self.mesh_points] * self.model.dim), self.model.bands))
         self.states = self.states.reshape((*([self.mesh_points] * self.model.dim), self.model.bands, self.model.bands))
+
+        # Gauge fixing on the boundaries
+        for i in range(self.model.dim):
+            idx = [slice(None)] * (self.model.dim + 2)
+            idx[i] = self.mesh_points - 1
+            self.states[tuple(idx)] = self.states.take(0, axis=i)
+
         self.evaluated = True
         return True
 
@@ -353,6 +360,8 @@ class Simulator:
 
         if method == "hatsugai":
             _, states = np.linalg.eigh(hamil)
+            states[-1] = states[0]          # Gauge fixing
+            states[:, -1] = states[:, 0]
             Q = 0.0
             F = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
             F = F @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
