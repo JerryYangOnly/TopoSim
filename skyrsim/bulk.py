@@ -71,9 +71,11 @@ class Simulator:
     def has_indirect_band_gap(self, filled_bands=None):
         return np.heaviside(self.indirect_band_gap(filled_bands), 0.0)
 
-    def plot_band(self, filled_bands=None, full=False, pi_ticks=True, close_fig=True, save_fig=""):
+    def plot_band(self, filled_bands=None, full=True, pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if not self.evaluated:
             self.populate_mesh()
+        if close_fig and return_fig:
+            raise ValueError("`close_fig` and `return_fig` cannot both be True")
         if not filled_bands:
             filled_bands = self.model.bands // 2    # Default to half-filling
 
@@ -93,12 +95,12 @@ class Simulator:
             if pi_ticks:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
-                fig.savefig(save_fig, dpi=600)
+                fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
             else:
                 plt.show()
             if close_fig:
                 plt.close(fig)
-            else:
+            elif return_fig:
                 return fig
 
         elif self.model.dim == 2:
@@ -121,22 +123,22 @@ class Simulator:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
                 ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
-                fig.savefig(save_fig, dpi=600)
+                fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
             else:
                 plt.show()
             if close_fig:
                 plt.close(fig)
-            else:
-                return fig
+            # else:
+            #     return fig
 
         else:
-            print("Band plotting of models in %d-D is not supported." % self.model.dim)
+            raise ValueError("Band plotting of models in %d-D is not supported" % self.model.dim)
 
 
     def compute_chern(self, filled_bands=None, method="hatsugai", **kwargs):
         if self.model.dim != 2:
-            print("Computation of Chern numbers is only supported in 2-D.")
-            return
+            raise ValueError("Computation of Chern numbers is only supported in 2-D")
+        
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
         if method == "hatsugai":
             if not self.evaluated:
@@ -400,11 +402,11 @@ class Simulator:
         else:
             raise NotImplementedError
 
-    def plot_spin_texture(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=True, save_fig=""):
+    def plot_spin_texture(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if self.model.dim != 2:
-            print("Spin texture plotting is only supported in 2-D.")
-            return
-
+            raise ValueError("Spin texture plotting is only supported in 2-D")
+        if close_fig and return_fig:
+            raise ValueError("`close_fig` and `return_fig` cannot both be True")
         self.populate_spin(filled_bands)
 
         fig = plt.figure()
@@ -422,44 +424,70 @@ class Simulator:
             ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         ax.set_zlim(-np.pi, np.pi)
         if save_fig:
-            fig.savefig(save_fig, dpi=600)
+            fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
         else:
             plt.show()
         if close_fig:
             plt.close(fig)
-        else:
+        elif return_fig:
             return fig
 
-    def plot_spin_heat_map(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=True, save_fig=""):
+    def plot_spin_heat_map(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=False, return_fig=False,
+                           save_fig="", max_magnitude=1.0, cmap="RdBu", subplots=False):
+        max_magnitude = np.abs(max_magnitude)
         if self.model.dim != 2:
-            print("Spin texture plotting is only supported in 2-D.")
-            return
-
+            raise ValueError("Spin texture plotting is only supported in 2-D.")
+        if close_fig and return_fig:
+            raise ValueError("`close_fig` and `return_fig` cannot both be True")
         self.populate_spin(filled_bands)
         s = self.spin if not normalize else self.normalized_spin()
 
         figs = []
+        if subplots:
+            fig, axs = plt.subplots(1, 3)
+            fig.set_figwidth(12)
+            fig.set_figheight(4)
         for i in range(3):
-            fig = plt.figure()
-            ax = fig.gca()
-            pos = ax.imshow(s[:, :, i].transpose(), cmap="coolwarm", extent=(-np.pi, np.pi, -np.pi, np.pi), origin="lower")
+            if not subplots:
+                fig = plt.figure()
+                ax = fig.gca()
+            else:
+                ax = axs[i]
+            im = ax.imshow(s[:, :, i].transpose(), cmap=cmap, extent=(-np.pi, np.pi, -np.pi, np.pi), origin="lower",
+                            vmin=-max_magnitude, vmax=max_magnitude)
+            if not subplots:
+                fig.colorbar(im, ax=ax)
             ax.set_xlabel("$k_x$")
             ax.set_ylabel("$k_y$")
             ax.set_title("$\\langle S\\rangle_" + ["x", "y", "z"][i] + "$")
             if pi_ticks:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
                 ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-            fig.colorbar(pos, ax=ax)
-            if save_fig:
-                if save_fig.endswith(".png"):
-                    fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                
+            if not subplots:
+                if save_fig:
+                    if save_fig.endswith(".png"):
+                        fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                    else:
+                        fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
                 else:
-                    fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                    plt.show()
+                if close_fig:
+                    plt.close(fig)
+                elif return_fig:
+                    figs.append(fig)
+        if subplots:
+            fig.tight_layout()
+            fig.subplots_adjust(right=0.85)
+            cbar_ax = fig.add_axes([0.9, 0.15, 0.05, 0.7])
+            fig.colorbar(im, cax=cbar_ax)
+            if save_fig:
+                fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
             else:
                 plt.show()
             if close_fig:
                 plt.close(fig)
-            else:
-                figs.append(fig)
-        if not close_fig:
+            elif return_fig:
+                return fig
+        elif return_fig:
             return figs
