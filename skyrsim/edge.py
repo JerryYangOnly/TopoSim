@@ -172,13 +172,15 @@ class EdgeSimulator(Simulator):
         elif return_fig:
             return fig
         
-    def plot_spin_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", subplots=False):
+    def plot_spin_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", subplots=False, group="components"):
         if self.eff_dim != 1:
             raise ValueError("Spin plotting of bands is only supported in 1-D")
         if save_fig:
             close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
+        if group not in ["bands", "components"]:       # TODO: implement the option 'all'
+            raise ValueError("`group` must be one of 'bands' or 'components'")
         if self.S is None:
             return
         if not self.evaluated:
@@ -194,10 +196,11 @@ class EdgeSimulator(Simulator):
         
         figs = []
         if subplots:
-            fig, axs = plt.subplots(1, 3)
-            fig.set_figwidth(12)
+            fig, axs = plt.subplots(1, 3 if group == "components" else len(bands))
+            fig.set_figwidth(4 * (3 if group == "components" else len(bands)))
             fig.set_figheight(4)
-        for i in range(3):
+        
+        for i in range(3 if group == "components" else len(bands)):
             if not subplots:
                 fig = plt.figure()
                 ax = fig.gca()
@@ -207,11 +210,15 @@ class EdgeSimulator(Simulator):
             dims = [i for i in range(self.model.dim) if i not in self.open_dim]
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
 
-            for b, s in zip(range(len(spin)), spin):
-                ax.plot(self.mesh, s[:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}^{" + str(bands[b] + 1) + "}$")
+            if group == "components":
+                for bd in range(len(bands)):
+                    ax.plot(self.mesh, spin[bd][:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}^{" + str(bands[bd] + 1) + "}$")
+            elif group == "bands":
+                for cpt in range(3):
+                    ax.plot(self.mesh, spin[i][:, cpt], label="$\\langle S\\rangle_{" + dim_labels(cpt) + "}^{" + str(bands[i] + 1) + "}$")
 
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
-            ax.set_ylabel("$S_" + ["x", "y", "z"][i] + "(\\mathbf{k})$")
+            ax.set_ylabel(("$S_" + ["x", "y", "z"][i] + "(\\mathbf{k})$") if group == "components" else "$S(\\mathbf{k})$")
             ax.set_title("Spin expectations")
             ax.legend()
             if pi_ticks:
@@ -219,16 +226,23 @@ class EdgeSimulator(Simulator):
 
             if not subplots:
                 if save_fig:
-                    if save_fig.endswith(".png"):
-                        fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
-                    else:
-                        fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                    if group == "components":
+                        if save_fig.endswith(".png"):
+                            fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                        else:
+                            fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
+                    elif group == "bands":
+                        if save_fig.endswith(".png"):
+                            fig.savefig(save_fig[:-4] + "_%d.png" % (i + 1), dpi=600)
+                        else:
+                            fig.savefig(save_fig + "_%d.png" % (i + 1), dpi=600)
                 else:
                     plt.show()
                 if close_fig:
                     plt.close(fig)
                 elif return_fig:
                     figs.append(fig)
+
         if subplots:
             fig.tight_layout()
             if save_fig:
