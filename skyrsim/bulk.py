@@ -182,6 +182,52 @@ class Simulator:
         p[p > 0.5] -= 1
         p[p <= -0.5] += 1
         return np.sum(p)
+    
+    def plot_wcc_spectrum(self, filled_bands=None, wl_density=100, axis=0, force_density=False,
+                          save_fig="", close_fig=False, return_fig=False, pi_ticks=False):
+        if self.model.dim != 2:
+            raise ValueError("WCC plotting is only supported in 2-D")
+        if save_fig:
+            close_fig = True
+        if close_fig and return_fig:
+            raise ValueError("`close_fig` and `return_fig` cannot both be True")
+        
+        filled_bands = filled_bands if filled_bands else self.model.dim // 2
+        if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
+            p = np.zeros((wl_density, filled_bands))
+
+            for i, ky in zip(range(wl_density), np.linspace(-np.pi, np.pi, wl_density)):
+                if axis == 0:
+                    p[i] = self.wilson_loop(lambda x: ((x - 1/2) * 2 * np.pi, ky), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+                else:
+                    p[i] = self.wilson_loop(lambda x: (ky, (x - 1/2) * 2 * np.pi), wl_density, filled_bands=filled_bands, phases=True) / 2 / np.pi
+        else:
+            wl_density = self.mesh_points - 1
+            p = np.zeros((wl_density, filled_bands))
+
+            for i in range(wl_density):
+                p[i] = self._wilson_loop_grid((0, i) if axis == 0 else (i, 0), filled_bands=filled_bands, axis=axis) / 2 / np.pi
+        
+        fig = plt.figure()
+        ax = fig.gca()
+        ax.plot(np.linspace(-np.pi, np.pi, wl_density), p, "ko", markersize=4)
+        ax.set_xlabel("$k_y$" if axis == 0 else "$k_x$")
+        ax.set_ylabel("WCC")
+        ax.set_title("Wannier Center Spectral Flow")
+        ax.set_xlim((-np.pi, np.pi))
+        ax.set_ylim((-0.5, 0.5))
+        if pi_ticks:
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+
+        if not save_fig:
+            plt.show()
+        else:
+            fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
+        if close_fig:
+            plt.close(fig)
+        elif return_fig:
+            return fig
+        
 
     def compute_z2(self, filled_bands=None, SOC=True, method="hwcc", **kwargs):
         if self.model.dim != 2:
@@ -393,14 +439,7 @@ class Simulator:
             v -= self.compute_skyrmion(filled_bands)
             self.spin_evaluated = 0
 
-            def _smooth_round(vf, threshold=1e-4):
-                rvf = np.round(vf)
-                if np.abs(rvf - vf) > threshold:
-                    return vf
-                else:
-                    return rvf
-
-            return (_smooth_round(v) / 2) % 2
+            return (np.round(v, decimals=4) / 2) % 2
         else:
             raise NotImplementedError
 
