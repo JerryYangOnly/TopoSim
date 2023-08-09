@@ -179,8 +179,10 @@ class EdgeSimulator(Simulator):
             close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
-        if group not in ["bands", "components"]:       # TODO: implement the option 'all'
-            raise ValueError("`group` must be one of 'bands' or 'components'")
+        if group not in ["bands", "components", "all"]:
+            raise ValueError("`group` must be one of 'bands', 'components', or 'all'")
+        if group == "all":
+            subplots = False
         if self.S is None:
             return
         if not self.evaluated:
@@ -195,12 +197,20 @@ class EdgeSimulator(Simulator):
         spin = [np.tensordot(self.S, np.swapaxes(np.conj(state), -1, -2) @ state, ([1, 2], [self.eff_dim, self.eff_dim + 1])).transpose().real for state in states]
         
         figs = []
+        
+        if group == "components":
+            loops = 3
+        elif group == "bands":
+            loops = len(bands)
+        elif group == "all":
+            loops = 1
+
         if subplots:
-            fig, axs = plt.subplots(1, 3 if group == "components" else len(bands))
-            fig.set_figwidth(4 * (3 if group == "components" else len(bands)))
+            fig, axs = plt.subplots(1, loops)
+            fig.set_figwidth(4 * (loops))
             fig.set_figheight(4)
         
-        for i in range(3 if group == "components" else len(bands)):
+        for i in range(loops):
             if not subplots:
                 fig = plt.figure()
                 ax = fig.gca()
@@ -212,10 +222,14 @@ class EdgeSimulator(Simulator):
 
             if group == "components":
                 for bd in range(len(bands)):
-                    ax.plot(self.mesh, spin[bd][:, i], label="$\\langle S\\rangle_{" + dim_labels(i) + "}^{" + str(bands[bd] + 1) + "}$")
+                    ax.plot(self.mesh, spin[bd][:, i], "o", markersize=3, label="$\\langle S\\rangle_{" + dim_labels(i) + "}^{" + str(bands[bd] + 1) + "}$")
             elif group == "bands":
                 for cpt in range(3):
-                    ax.plot(self.mesh, spin[i][:, cpt], label="$\\langle S\\rangle_{" + dim_labels(cpt) + "}^{" + str(bands[i] + 1) + "}$")
+                    ax.plot(self.mesh, spin[i][:, cpt], "o", markersize=3, label="$\\langle S\\rangle_{" + dim_labels(cpt) + "}^{" + str(bands[i] + 1) + "}$")
+            elif group == "all":
+                for bd in range(len(bands)):
+                    for cpt in range(3):
+                        ax.plot(self.mesh, spin[bd][:, cpt], "o", markersize=3, label="$\\langle S\\rangle_{" + dim_labels(cpt) + "}^{" + str(bands[bd] + 1) + "}$")
 
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel(("$S_" + ["x", "y", "z"][i] + "(\\mathbf{k})$") if group == "components" else "$S(\\mathbf{k})$")
@@ -236,6 +250,8 @@ class EdgeSimulator(Simulator):
                             fig.savefig(save_fig[:-4] + "_%d.png" % (i + 1), dpi=600)
                         else:
                             fig.savefig(save_fig + "_%d.png" % (i + 1), dpi=600)
+                    elif group == "all":
+                        fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
                 else:
                     plt.show()
                 if close_fig:
