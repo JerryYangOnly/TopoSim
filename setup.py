@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
         name="skyrsim",
-        version="0.5.0",
+        version="0.5.1",
         author="Yuchen Yang",
         author_email="yuchen@pks.mpg.de",
         description="A package for computing bulk topological invariants and visualizing edge states",

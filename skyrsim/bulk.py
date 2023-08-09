@@ -72,10 +72,12 @@ class Simulator:
         return np.heaviside(self.indirect_band_gap(filled_bands), 0.0)
 
     def plot_band(self, filled_bands=None, full=True, pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
-        if not self.evaluated:
-            self.populate_mesh()
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
+        if not self.evaluated:
+            self.populate_mesh()
         if not filled_bands:
             filled_bands = self.model.bands // 2    # Default to half-filling
 
@@ -405,6 +407,8 @@ class Simulator:
     def plot_spin_texture(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if self.model.dim != 2:
             raise ValueError("Spin texture plotting is only supported in 2-D")
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         self.populate_spin(filled_bands)
@@ -437,6 +441,8 @@ class Simulator:
         max_magnitude = np.abs(max_magnitude)
         if self.model.dim != 2:
             raise ValueError("Spin texture plotting is only supported in 2-D.")
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         self.populate_spin(filled_bands)

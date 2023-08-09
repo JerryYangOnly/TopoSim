@@ -56,6 +56,8 @@ class EdgeSimulator(Simulator):
     def plot_band(self, band_hl=(), pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if not self.evaluated:
             self.populate_mesh()
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         if self.eff_dim == 1:
@@ -133,6 +135,8 @@ class EdgeSimulator(Simulator):
     def position_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude=1.0, cmap="hot"):
         if self.eff_dim != 1 or len(self.open_dim) != 1:
             raise ValueError("Dimension of the model is not supported. Are boundaries opened correctly?")
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         if not self.evaluated:
@@ -148,7 +152,10 @@ class EdgeSimulator(Simulator):
                   extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])), origin="lower",
                   vmin=0.0, vmax=max_magnitude, cmap=cmap)
         fig.colorbar(im, ax=ax)
-        ax.set_xlabel("Momentum")
+
+        dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+        dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+        ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
         ax.set_ylabel("Site")
         ax.set_title("Probability distributions of band %d" % (band + 1))
 
@@ -168,6 +175,8 @@ class EdgeSimulator(Simulator):
     def plot_spin_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", subplots=False):
         if self.eff_dim != 1:
             raise ValueError("Spin plotting of bands is only supported in 1-D")
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         if self.S is None:
@@ -236,11 +245,12 @@ class EdgeSimulator(Simulator):
     def spin_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude: float=0.5, cmap="RdBu", subplots=False):
         """Sums over the bands for the spin expectation value."""
         max_magnitude = np.abs(max_magnitude)
+        if self.eff_dim != 1 or len(self.open_dim) != 1:
+            raise ValueError("Dimension of the model is not supported. Are boundaries opened correctly?")
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
-        if self.eff_dim != 1 or len(self.open_dim) != 1:
-            print("Dimension of the model is not supported. Are boundaries opened correctly?")
-            return
         if self.S is None:
             return
         if not self.evaluated:
@@ -273,7 +283,10 @@ class EdgeSimulator(Simulator):
             if not subplots:
                 fig.colorbar(im, ax=ax)
 
-            ax.set_xlabel("Momentum")
+            
+            dims = [i for i in range(self.model.dim) if i not in self.open_dim]
+            dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
+            ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel("Site")
             ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands).astype(int) + 1)))
 
@@ -338,6 +351,8 @@ class EdgeSimulator(Simulator):
         return w
     
     def plot_entanglement_spectrum(self, filled_bands=None, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", a_half=True, op=None, trace: callable=None):
+        if save_fig:
+            close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         w = self.entanglement_spectrum(filled_bands, a_half=a_half, op=op, trace=trace)
