@@ -205,7 +205,7 @@ class EdgeSimulator(Simulator):
                 fig = plt.figure()
                 ax = fig.gca()
             else:
-                ax = axs[i]
+                ax = axs[i] if len(bands) > 1 else axs
 
             dims = [i for i in range(self.model.dim) if i not in self.open_dim]
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
