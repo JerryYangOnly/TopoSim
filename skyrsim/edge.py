@@ -360,7 +360,7 @@ class EdgeSimulator(Simulator):
         
         filled_bands = filled_bands if filled_bands else self.eff_bands // 2
         if not self.evaluated:
-            self.populate_mesh(filled_bands)
+            self.populate_mesh()
         # proj = np.zeros((self.mesh_points, self.eff_bands, self.eff_bands), dtype=np.complex64)
         if op is None:
             proj = self.gs_projector(filled_bands)
