@@ -48,7 +48,8 @@ class Model:
             hamiltonian = self.hamiltonian
             sz = self.bands
         else:
-            fft = lambda v: scipy.fft.fftn(v, axis=tuple(range(len(open_dim))))
+            # fft = lambda v: scipy.fft.fftn(v, axes=tuple(range(len(open_dim))))
+            fft = lambda v: scipy.fft.fft(v, axis=0)
             sN = np.array(N)
             sN[open_dim[0]] = 0
             hamiltonian = lambda k: self.open_hamiltonian(sN, k)
