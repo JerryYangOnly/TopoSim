@@ -98,7 +98,7 @@ class Simulator:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -126,7 +126,7 @@ class Simulator:
                 ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -219,10 +219,10 @@ class Simulator:
         if pi_ticks:
             ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
 
-        if not save_fig:
-            plt.show()
-        else:
+        if save_fig:
             fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
+        elif not return_fig:
+            plt.show()
         if close_fig:
             plt.close(fig)
         elif return_fig:
@@ -468,7 +468,7 @@ class Simulator:
         ax.set_zlim(-np.pi, np.pi)
         if save_fig:
             fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-        else:
+        elif not return_fig:
             plt.show()
         if close_fig:
             plt.close(fig)
@@ -508,14 +508,14 @@ class Simulator:
             if pi_ticks:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
                 ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-                
+
             if not subplots:
                 if save_fig:
                     if save_fig.endswith(".png"):
                         fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
                     else:
                         fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
-                else:
+                elif not return_fig:
                     plt.show()
                 if close_fig:
                     plt.close(fig)
@@ -528,7 +528,7 @@ class Simulator:
             fig.colorbar(im, cax=cbar_ax)
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)

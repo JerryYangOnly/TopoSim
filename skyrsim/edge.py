@@ -78,7 +78,7 @@ class EdgeSimulator(Simulator):
 
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -104,7 +104,7 @@ class EdgeSimulator(Simulator):
                 ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -165,7 +165,7 @@ class EdgeSimulator(Simulator):
 
         if save_fig:
             fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-        else:
+        elif not return_fig:
             plt.show()
         if close_fig:
             plt.close(fig)
@@ -252,7 +252,7 @@ class EdgeSimulator(Simulator):
                             fig.savefig(save_fig + "_%d.png" % (i + 1), dpi=600)
                     elif group == "all":
                         fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-                else:
+                elif not return_fig:
                     plt.show()
                 if close_fig:
                     plt.close(fig)
@@ -263,7 +263,7 @@ class EdgeSimulator(Simulator):
             fig.tight_layout()
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -328,7 +328,7 @@ class EdgeSimulator(Simulator):
                         fig.savefig(save_fig[:-4] + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
                     else:
                         fig.savefig(save_fig + ["_x.png", "_y.png", "_z.png"][i], dpi=600)
-                else:
+                elif not return_fig:
                     plt.show()
                 if close_fig:
                     plt.close(fig)
@@ -341,7 +341,7 @@ class EdgeSimulator(Simulator):
             fig.colorbar(im, cax=cbar_ax)
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-            else:
+            elif not return_fig:
                 plt.show()
             if close_fig:
                 plt.close(fig)
@@ -402,7 +402,7 @@ class EdgeSimulator(Simulator):
             ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
         if save_fig:
             fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
-        else:
+        elif not return_fig:
             plt.show()
         if close_fig:
             plt.close(fig)
