@@ -9,25 +9,30 @@ from .bulk import Simulator
 
 class EdgeSimulator(Simulator):
     def __init__(self, model: Model, points: int):
-        super().__init__(model, points)
+        self.model = model
+        self.set_mesh(points)
 
         self.N = np.zeros(self.model.dim)
         self.PBC = np.array([True] * self.model.dim)
+        self.sites = 1
         self.open_dim = []
         self.eff_dim = self.model.dim
         self.eff_bands = self.model.bands
+        self.set_spin_op(None)
 
     def open(self, N):
         self.N = np.array(N)
-        self.open_dim = np.arange(self.model.dim)[self.N > 0]
+        self.open_dim, = np.nonzero(self.N)
+        self.sites = np.prod(self.N[self.open_dim])
         self.PBC[self.open_dim] = False
         
         self.eff_dim = self.model.dim - len(self.open_dim)
-        self.eff_bands = self.model.bands * np.prod(self.N[self.open_dim])
+        self.eff_bands = self.model.bands * self.sites
         self.band = np.zeros((*([self.mesh_points] * self.eff_dim), self.eff_bands))
         self.states = np.zeros((*([self.mesh_points] * self.eff_dim), self.eff_bands, self.eff_bands), dtype=np.complex64)
-         
+
         self.evaluated = False
+        self.set_spin_op(self.S)
 
     def set_PBC(self, PBC):
         self.PBC = np.array(PBC)
@@ -52,6 +57,29 @@ class EdgeSimulator(Simulator):
         self.band = self.band.reshape((*([self.mesh_points] * self.eff_dim), self.eff_bands))
         self.states = self.states.reshape((*([self.mesh_points] * self.eff_dim), self.eff_bands, self.eff_bands))
         self.evaluated = True
+
+    def set_spin_op(self, S):
+        self.S = S
+        self.spin_evaluated = 0
+        self.spin = np.zeros((*([self.mesh_points] * self.eff_dim), 3))
+
+    def populate_spin(self, filled_bands=None):
+        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        if (self.spin_evaluated and self.spin_evaluated == filled_bands) or self.S is None:
+            return
+        if not self.evaluated:
+            self.populate_mesh()
+        shape = self.states[..., :filled_bands].shape
+        state = self.states[..., :filled_bands].reshape(shape[:-2] + (self.sites, self.model.bands) + shape[-1:])
+        spin = np.tensordot(self.S, np.conj(state) @ np.swapaxes(state, -1, -2), ([1, 2], [self.eff_dim + 1, self.eff_dim + 2]))
+        spin = spin.transpose(list(range(1, len(spin.shape))) + [0]).real
+        self.spin = spin.reshape(shape[:-2] + (self.sites, 3))
+        self.spin_evaluted = filled_bands
+
+    def normalized_spin(self):
+        s = np.sqrt(np.sum(self.spin**2, axis=2, keepdims=True))
+        s[s == 0] = np.finfo(np.float32).eps
+        return self.spin / s
 
     def plot_band(self, band_hl=(), pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if not self.evaluated:
@@ -148,8 +176,8 @@ class EdgeSimulator(Simulator):
 
         pdfs = np.array(self.pdfs(self.states[:, :, band], sum_internal=True))
 
-        im = ax.imshow(pdfs.transpose(), aspect=2 * np.pi / np.prod(self.N[self.open_dim]),
-                  extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])), origin="lower",
+        im = ax.imshow(pdfs.transpose(), aspect=2 * np.pi / self.sites,
+                  extent=(-np.pi, np.pi, 0, self.sites), origin="lower",
                   vmin=0.0, vmax=max_magnitude, cmap=cmap)
         fig.colorbar(im, ax=ax)
 
@@ -193,7 +221,7 @@ class EdgeSimulator(Simulator):
         else:
             bands = band
         
-        states = [self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands)) for band in bands]
+        states = [self.states[..., band].reshape((self.mesh_points, self.sites, self.model.bands)) for band in bands]
         spin = [np.tensordot(self.S, np.swapaxes(np.conj(state), -1, -2) @ state, ([1, 2], [self.eff_dim, self.eff_dim + 1])).transpose().real for state in states]
         
         figs = []
@@ -291,7 +319,7 @@ class EdgeSimulator(Simulator):
         else:
             bands = band
         
-        states = [self.states[..., band].reshape((self.mesh_points, np.prod(self.N[self.open_dim]), self.model.bands)) for band in bands]
+        states = [self.states[..., band].reshape((self.mesh_points, self.sites, self.model.bands)) for band in bands]
         spin = [np.sum(np.dot(self.S, state.transpose((0, 2, 1))).transpose((0, 2, 1, 3)) * state.conj().transpose(0, 2, 1), axis=2).real for state in states]
         spin = sum(spin)
 
@@ -307,8 +335,8 @@ class EdgeSimulator(Simulator):
             else:
                 ax = axs[i]
 
-            im = ax.imshow(spin[i].T, aspect=2 * np.pi / np.prod(self.N[self.open_dim]),
-                           extent=(-np.pi, np.pi, 0, np.prod(self.N[self.open_dim])), origin="lower",
+            im = ax.imshow(spin[i].T, aspect=2 * np.pi / self.sites,
+                           extent=(-np.pi, np.pi, 0, self.sites), origin="lower",
                            vmin=-max_magnitude, vmax=max_magnitude, cmap=cmap)
             if not subplots:
                 fig.colorbar(im, ax=ax)
@@ -365,7 +393,7 @@ class EdgeSimulator(Simulator):
         if op is None:
             proj = self.gs_projector(filled_bands)
         else:
-            op = np.kron(np.eye(np.prod(self.N[self.open_dim])), op)
+            op = np.kron(np.eye(self.sites), op)
             proj = op @ self.states[..., :, :filled_bands] @ np.swapaxes(np.conj(self.states[..., :, :filled_bands]), -1, -2) @ np.conj(op).T
         
         N = proj.shape[-1] // 2
