@@ -85,6 +85,7 @@ class PhaseDiagram:
         self.title = ""
         self.sim_density = sim_density
         self.S = None
+        self.Ss = None
         self.filled_bands = None
 
         self.chern = self.skyr = self.z2 = self.skyr_z2 = self.gap = self.spin_gap = self.ind_gap = False
@@ -106,6 +107,9 @@ class PhaseDiagram:
     def set_spin_op(self, S: np.ndarray) -> None:
         self.S = S
 
+    def set_sub_spin_op(self, Ss: np.ndarray) -> None:
+        self.Ss = Ss
+
     def set_filled_bands(self, filled_bands: int) -> None:
         self.filled_bands = filled_bands
 
@@ -120,7 +124,7 @@ class PhaseDiagram:
         if self.z2:
             res.append(sim.compute_z2(self.filled_bands, method=self.z2_method))
         if self.skyr_z2:
-            res.append(sim.compute_skyrmion_z2(self.S, self.filled_bands, SOC=False))
+            res.append(sim.compute_skyrmion_z2(self.Ss, self.filled_bands, SOC=False))
         if self.gap:
             res.append(sim.direct_band_gap(self.filled_bands))
         if self.spin_gap:
@@ -144,7 +148,7 @@ class PhaseDiagram:
         self.spin_gap = "spin_gap" in invar
         self.ind_gap = "ind_gap" in invar
         
-        if (self.skyr or self.skyr_z2 or self.spin_gap) and self.S is None:
+        if ((self.skyr or self.spin_gap) and self.S is None) or (self.skyr_z2 and self.Ss is None):
             raise ValueError("Spin related quantities cannot be evaluated with a spin operator set.")
 
         X, Y = np.meshgrid(self.xlim, self.ylim)
