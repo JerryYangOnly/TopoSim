@@ -432,13 +432,14 @@ class Simulator:
         if not SOC:
             if filled_bands and filled_bands % 2 == 1:
                 raise ValueError("`filled_bands` cannot be odd in Z2 computation")
+            S, spin, spin_evaluated = self.S, self.spin, self.spin_evaluated
             sop1 = np.kron(np.array([[1, 0], [0, 0]]), Ss)
             sop2 = np.kron(np.array([[0, 0], [0, 1]]), Ss)
             self.set_spin_op(sop1)
             v = self.compute_skyrmion(filled_bands)
             self.set_spin_op(sop2)
             v -= self.compute_skyrmion(filled_bands)
-            self.spin_evaluated = 0
+            self.S, self.spin, self.spin_evaluated = S, spin, spin_evaluated
 
             return (np.round(v, decimals=4) / 2) % 2
         else:
