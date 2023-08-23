@@ -88,6 +88,8 @@ class EdgeSimulator(Simulator):
             close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
+        if not isinstance(band_hl, (range, list, tuple, np.ndarray)):
+            band_hl = (band_hl,)
         if self.eff_dim == 1:
             fig, ax = plt.subplots()
             for i in range(self.eff_bands):
@@ -160,7 +162,7 @@ class EdgeSimulator(Simulator):
     def pdfs(self, states, sum_internal=True):
         return [self.pdf(state, sum_internal=sum_internal) for state in states]
         
-    def position_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude=1.0, cmap="hot"):
+    def position_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude=1.0, cmap="inferno"):
         if self.eff_dim != 1 or len(self.open_dim) != 1:
             raise ValueError("Dimension of the model is not supported. Are boundaries opened correctly?")
         if save_fig:
@@ -216,7 +218,7 @@ class EdgeSimulator(Simulator):
         if not self.evaluated:
             self.populate_mesh()
 
-        if not isinstance(band, (list, tuple, np.ndarray)):
+        if not isinstance(band, (range, list, tuple, np.ndarray)):
             bands = [band]
         else:
             bands = band
@@ -300,7 +302,7 @@ class EdgeSimulator(Simulator):
         elif return_fig:
             return figs
 
-    def spin_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude: float=0.5, cmap="RdBu", subplots=False):
+    def spin_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude: float=0.0, cmap="RdBu", subplots=False):
         """Sums over the bands for the spin expectation value."""
         max_magnitude = np.abs(max_magnitude)
         if self.eff_dim != 1 or len(self.open_dim) != 1:
@@ -314,7 +316,7 @@ class EdgeSimulator(Simulator):
         if not self.evaluated:
             self.populate_mesh()
 
-        if not isinstance(band, (list, tuple, np.ndarray)):
+        if not isinstance(band, (range, list, tuple, np.ndarray)):
             bands = [band]
         else:
             bands = band
@@ -322,6 +324,9 @@ class EdgeSimulator(Simulator):
         states = [self.states[..., band].reshape((self.mesh_points, self.sites, self.model.bands)) for band in bands]
         spin = [np.sum(np.dot(self.S, state.transpose((0, 2, 1))).transpose((0, 2, 1, 3)) * state.conj().transpose(0, 2, 1), axis=2).real for state in states]
         spin = sum(spin)
+
+        if max_magnitude == 0:
+            max_magnitude = np.max(np.abs(spin))
 
         figs = []
         if subplots:
@@ -346,7 +351,10 @@ class EdgeSimulator(Simulator):
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel("Site")
-            ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands).astype(int) + 1)))
+            if len(bands) <= 3:
+                ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands).astype(int) + 1)))
+            else:
+                ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands[:3]).astype(int) + 1) + " and %d more" % (len(bands) - 3)))
 
             if pi_ticks:
                 ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
