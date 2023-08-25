@@ -405,9 +405,7 @@ class Simulator:
 
         spin = self.normalized_spin()
         # Normalize the spin for the computation
-        hamil = np.zeros((self.mesh_points, self.mesh_points, 2, 2), dtype=np.complex64)
-        for i in range(3):
-            hamil += pauli[i + 1] * spin[..., i, np.newaxis, np.newaxis]
+        hamil = np.sum(pauli[1:] * spin[..., np.newaxis, np.newaxis], axis=2)
 
         if method == "hatsugai":
             _, states = np.linalg.eigh(hamil)
