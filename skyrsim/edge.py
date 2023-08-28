@@ -73,7 +73,7 @@ class EdgeSimulator(Simulator):
         state = self.states[..., :filled_bands].reshape(shape[:-2] + (self.sites, self.model.bands) + shape[-1:])
         spin = np.tensordot(self.S, np.conj(state) @ np.swapaxes(state, -1, -2), ([1, 2], [self.eff_dim + 1, self.eff_dim + 2]))
         spin = spin.transpose(list(range(1, len(spin.shape))) + [0]).real
-        if self.site > 1:
+        if self.sites > 1:
             self.spin = spin.reshape(shape[:-2] + (self.sites, 3))
         else:
             self.spin = spin.reshape(shape[:-2] + (3,))
