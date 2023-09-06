@@ -52,7 +52,7 @@ class Model:
             fft = lambda v: scipy.fft.fft(v, axis=0)
             sN = np.array(N)
             sN[open_dim[0]] = 0
-            hamiltonian = lambda k: self.open_hamiltonian(sN, k)
+            hamiltonian = lambda k: self.open_hamiltonian(sN, k, PBC)
             sz = np.prod(N[open_dim[1:]]) * self.bands
         
         ks = np.tile(k, (N[open_dim[0]], 1))
