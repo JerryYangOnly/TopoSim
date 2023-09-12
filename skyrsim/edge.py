@@ -163,7 +163,7 @@ class EdgeSimulator(Simulator):
 
 
     def pdfs(self, states, sum_internal=True):
-        return [self.pdf(state, sum_internal=sum_internal) for state in states]
+        return np.array([self.pdf(state, sum_internal=sum_internal) for state in states])
         
     def position_heat_map_band(self, band, pi_ticks=True, close_fig=False, return_fig=False, save_fig="", max_magnitude=1.0, cmap="inferno"):
         if self.eff_dim != 1 or len(self.open_dim) != 1:
@@ -174,12 +174,17 @@ class EdgeSimulator(Simulator):
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         if not self.evaluated:
             self.populate_mesh()
+
+        if not isinstance(band, (range, list, tuple, np.ndarray)):
+            bands = [band]
+        else:
+            bands = band
         
         fig = plt.figure()
         # ax = fig.gca(projection="3d")
         ax = fig.gca()
 
-        pdfs = np.array(self.pdfs(self.states[:, :, band], sum_internal=True))
+        pdfs = np.sum(np.array([self.pdfs(self.states[:, :, band], sum_internal=True) for band in bands]), axis=0)
 
         im = ax.imshow(pdfs.transpose(), aspect=2 * np.pi / self.sites,
                   extent=(-np.pi, np.pi, 0, self.sites), origin="lower",
@@ -190,7 +195,11 @@ class EdgeSimulator(Simulator):
         dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
         ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
         ax.set_ylabel("Site")
-        ax.set_title("Probability distributions of band %d" % (band + 1))
+        # ax.set_title("Probability distributions of band %d" % (band + 1))
+        if len(bands) <= 3:
+            ax.set_title("Probability distributions of band %s" % str(np.array(bands).astype(int) + 1))
+        else:
+            ax.set_title("Probability distributions of band %s" % (str(np.array(bands[:3]).astype(int) + 1) + " and %d more" % (len(bands) - 3)))
 
         if pi_ticks:
             ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
@@ -248,7 +257,7 @@ class EdgeSimulator(Simulator):
                 fig = plt.figure()
                 ax = fig.gca()
             else:
-                ax = axs[i] if len(bands) > 1 else axs
+                ax = axs[i] if loops > 1 else axs
 
             dims = [i for i in range(self.model.dim) if i not in self.open_dim]
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
