@@ -3,30 +3,44 @@ import scipy
 import scipy.linalg
 import matplotlib.pyplot as plt
 
-from .common import *
-from .model import *
+from .common import pauli
+from .model import Model
 
 # A class for simulating results
 class Simulator:
     def __init__(self, model: Model, mesh_points: int):
         self.model = model
-        self.set_mesh(mesh_points)
+
+        # self.set_mesh(mesh_points)
+        self.mesh_points = mesh_points
+        self.mesh = np.linspace(-np.pi, np.pi, mesh_points)
+        self.evaluated = False
+        self.band = np.zeros((*([mesh_points] * self.model.dim),
+                              self.model.bands))
+        self.states = np.zeros((*([mesh_points] * self.model.dim),
+                                self.model.bands, self.model.bands),
+                                dtype=np.complex64)
+
         self.set_spin_op(None)
 
     def set_mesh(self, mesh_points):
         self.mesh_points = mesh_points
-        self.mesh = np.linspace(-np.pi, np.pi, mesh_points) #, endpoint=False)
-        # self.meshX, self.meshY = np.meshgrid(np.linspace(-np.pi, np.pi, mesh_points, endpoint=False))
+        self.mesh = np.linspace(-np.pi, np.pi, mesh_points)
         self.evaluated = False
-        self.band = np.zeros((*([mesh_points] * self.model.dim), self.model.bands))
-        self.states = np.zeros((*([mesh_points] * self.model.dim), self.model.bands, self.model.bands), dtype=np.complex64)
+        self.band = np.zeros((*([mesh_points] * self.model.dim),
+                              self.model.bands))
+        self.states = np.zeros((*([mesh_points] * self.model.dim),
+                                self.model.bands, self.model.bands),
+                                dtype=np.complex64)
 
     def populate_mesh(self):
         if self.evaluated:
             return False
         # print("Starting evaluation")
-        self.band = self.band.reshape(self.mesh_points**self.model.dim, self.model.bands)
-        self.states = self.states.reshape(self.mesh_points**self.model.dim, self.model.bands, self.model.bands)
+        self.band = self.band.reshape(self.mesh_points**self.model.dim,
+                                      self.model.bands)
+        self.states = self.states.reshape(self.mesh_points**self.model.dim,
+                                          self.model.bands, self.model.bands)
         for i in range(self.mesh_points**self.model.dim):
             idx = [0] * self.model.dim
             k = i
@@ -71,7 +85,8 @@ class Simulator:
     def has_indirect_band_gap(self, filled_bands=None):
         return np.heaviside(self.indirect_band_gap(filled_bands), 0.0)
 
-    def plot_band(self, filled_bands=None, full=True, pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
+    def plot_band(self, filled_bands=None, full=True, pi_ticks=True,
+                  close_fig=False, return_fig=False, save_fig=""):
         if save_fig:
             close_fig = True
         if close_fig and return_fig:
@@ -95,7 +110,9 @@ class Simulator:
             ax.set_ylabel("$E(k_x)$")
             ax.set_title("Band spectrum")
             if pi_ticks:
-                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5),
+                              ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                               "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
             elif not return_fig:
@@ -122,8 +139,12 @@ class Simulator:
             ax.set_zlabel("$E(\\mathbf{k})$")
             ax.set_title("Band spectrum")
             if pi_ticks:
-                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-                ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5),
+                              ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                               "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_yticks(np.linspace(-np.pi, np.pi, 5),
+                              ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                               "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
             if save_fig:
                 fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
             elif not return_fig:
@@ -140,7 +161,7 @@ class Simulator:
     def compute_chern(self, filled_bands=None, method="hatsugai", **kwargs):
         if self.model.dim != 2:
             raise ValueError("Computation of Chern numbers is only supported in 2-D")
-        
+
         filled_bands = filled_bands if filled_bands else self.model.bands // 2
         if method == "hatsugai":
             if not self.evaluated:
@@ -158,7 +179,7 @@ class Simulator:
         F = np.angle(np.linalg.det(F))
         Q = np.sum(F) / 2.0 / np.pi
         return Q
-    
+
     def _chern_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
         if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
             p = np.zeros((wl_density, filled_bands))
@@ -174,7 +195,7 @@ class Simulator:
 
             for i in range(wl_density):
                 p[i] = self._wilson_loop_grid((0, i) if axis == 0 else (i, 0), filled_bands=filled_bands, axis=axis) / 2 / np.pi
-        
+
         p = np.sum(p, axis=1)
         p -= np.floor(p)
         p -= np.roll(p, 1)
@@ -182,7 +203,7 @@ class Simulator:
         p[p > 0.5] -= 1
         p[p <= -0.5] += 1
         return np.sum(p)
-    
+
     def plot_wcc_spectrum(self, filled_bands=None, wl_density=100, axis=0, force_density=False,
                           save_fig="", close_fig=False, return_fig=False, pi_ticks=False):
         if self.model.dim != 2:
@@ -191,7 +212,7 @@ class Simulator:
             close_fig = True
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
-        
+
         filled_bands = filled_bands if filled_bands else self.model.dim // 2
         if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
             p = np.zeros((wl_density, filled_bands))
@@ -207,7 +228,7 @@ class Simulator:
 
             for i in range(wl_density):
                 p[i] = self._wilson_loop_grid((0, i) if axis == 0 else (i, 0), filled_bands=filled_bands, axis=axis) / 2 / np.pi
-        
+
         fig = plt.figure()
         ax = fig.gca()
         ax.plot(np.linspace(-np.pi, np.pi, wl_density), p, "ko", markersize=4)
@@ -217,7 +238,9 @@ class Simulator:
         ax.set_xlim((-np.pi, np.pi))
         ax.set_ylim((-0.5, 0.5))
         if pi_ticks:
-            ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+            ax.set_xticks(np.linspace(-np.pi, np.pi, 5),
+                          ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                           "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
 
         if save_fig:
             fig.savefig(save_fig if save_fig.endswith(".png") else save_fig + ".png", dpi=600)
@@ -227,7 +250,7 @@ class Simulator:
             plt.close(fig)
         elif return_fig:
             return fig
-        
+
 
     def compute_z2(self, filled_bands=None, SOC=True, method="hwcc", **kwargs):
         if self.model.dim != 2:
@@ -366,7 +389,7 @@ class Simulator:
                 W = v @ v.conj().T @ W
         W = np.conj(origin).T @ W @ origin
         return np.sort(np.angle(scipy.linalg.eig(W)[0]))
-    
+
 
     def set_spin_op(self, S):
         self.S = S
@@ -475,8 +498,10 @@ class Simulator:
         elif return_fig:
             return fig
 
-    def plot_spin_heat_map(self, filled_bands=None, normalize=True, pi_ticks=True, close_fig=False, return_fig=False,
-                           save_fig="", max_magnitude=1.0, cmap="RdBu", subplots=False):
+    def plot_spin_heat_map(self, filled_bands=None, normalize=True,
+                           pi_ticks=True, close_fig=False, return_fig=False,
+                           save_fig="", max_magnitude=1.0, cmap="RdBu",
+                           subplots=False):
         max_magnitude = np.abs(max_magnitude)
         if self.model.dim != 2:
             raise ValueError("Spin texture plotting is only supported in 2-D.")
@@ -485,7 +510,7 @@ class Simulator:
         if close_fig and return_fig:
             raise ValueError("`close_fig` and `return_fig` cannot both be True")
         self.populate_spin(filled_bands)
-        s = self.spin if not normalize else self.normalized_spin()
+        spin = self.spin if not normalize else self.normalized_spin()
 
         figs = []
         if subplots:
@@ -498,7 +523,7 @@ class Simulator:
                 ax = fig.gca()
             else:
                 ax = axs[i]
-            im = ax.imshow(s[:, :, i].transpose(), cmap=cmap, extent=(-np.pi, np.pi, -np.pi, np.pi), origin="lower",
+            im = ax.imshow(spin[:, :, i].transpose(), cmap=cmap, extent=(-np.pi, np.pi, -np.pi, np.pi), origin="lower",
                             vmin=-max_magnitude, vmax=max_magnitude)
             if not subplots:
                 fig.colorbar(im, ax=ax)
@@ -506,8 +531,12 @@ class Simulator:
             ax.set_ylabel("$k_y$")
             ax.set_title("$\\langle S\\rangle_" + ["x", "y", "z"][i] + "$")
             if pi_ticks:
-                ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
-                ax.set_yticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_xticks(np.linspace(-np.pi, np.pi, 5),
+                              ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                               "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
+                ax.set_yticks(np.linspace(-np.pi, np.pi, 5),
+                              ["$-\\pi$", "$-\\frac{\\pi}{2}$",
+                               "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
 
             if not subplots:
                 if save_fig:
