@@ -196,10 +196,12 @@ class EdgeSimulator(Simulator):
         ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
         ax.set_ylabel("Site")
         # ax.set_title("Probability distributions of band %d" % (band + 1))
-        if len(bands) <= 3:
-            ax.set_title("Probability distributions of band %s" % str(np.array(bands).astype(int) + 1))
+        if len(bands) == 1:
+            ax.set_title("Probability distributions of band %d" % (bands[0] + 1))
+        elif len(bands) <= 3:
+            ax.set_title("Probability distributions of bands %s" % str(np.array(bands).astype(int) + 1))
         else:
-            ax.set_title("Probability distributions of band %s" % (str(np.array(bands[:3]).astype(int) + 1) + " and %d more" % (len(bands) - 3)))
+            ax.set_title("Probability distributions of bands %s" % (str(np.array(bands[:3]).astype(int) + 1) + " and %d more" % (len(bands) - 3)))
 
         if pi_ticks:
             ax.set_xticks(np.linspace(-np.pi, np.pi, 5), ["$-\\pi$", "$-\\frac{\\pi}{2}$", "$0$", "$\\frac{\\pi}{2}$", "$\\pi$"])
@@ -363,7 +365,9 @@ class EdgeSimulator(Simulator):
             dim_labels = lambda i: ["x", "y", "z", "w"][i] if i <= 3 else str(i)
             ax.set_xlabel("$k_{" + dim_labels(dims[0]) + "}$")
             ax.set_ylabel("Site")
-            if len(bands) <= 3:
+            if len(bands) == 1:
+                ax.set_title("$\\langle S_%s\\rangle$ of band %d" % (["x", "y", "z"][i], bands[0] + 1))
+            elif len(bands) <= 3:
                 ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands).astype(int) + 1)))
             else:
                 ax.set_title("$\\langle S_%s\\rangle$ of bands %s" % (["x", "y", "z"][i], str(np.array(bands[:3]).astype(int) + 1) + " and %d more" % (len(bands) - 3)))
