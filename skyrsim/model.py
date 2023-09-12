@@ -52,7 +52,7 @@ class Model:
             fft = lambda v: scipy.fft.fft(v, axis=0)
             sN = np.array(N)
             sN[open_dim[0]] = 0
-            hamiltonian = lambda k: self.open_hamiltonian(sN, k)
+            hamiltonian = lambda k: self.open_hamiltonian(sN, k, PBC)
             sz = np.prod(N[open_dim[1:]]) * self.bands
         
         ks = np.tile(k, (N[open_dim[0]], 1))
@@ -142,8 +142,8 @@ class BHZModel(Model):
         assert k.shape == (self.dim,)
         d = np.concatenate((np.sin(k), np.array([np.sum(np.cos(k)) + self.parameters["u"]])))
         hamil = np.kron(pauli[0], d[2] * pauli[3] + d[1] * pauli[2]) + np.kron(pauli[3], d[0] * pauli[1])
-        hamil[-self.bands // 2:, :self.bands // 2] = self.parameters["SOC"]
-        hamil[:self.bands // 2, -self.bands // 2:] = np.conj(self.parameters["SOC"]).T
+        hamil[2:, :2] = self.parameters["SOC"]
+        hamil[:2, 2:] = np.conj(self.parameters["SOC"]).T
         return hamil
 
 class FourBandModel(Model):
