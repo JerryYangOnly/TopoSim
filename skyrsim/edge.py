@@ -64,7 +64,7 @@ class EdgeSimulator(Simulator):
         self.spin = np.zeros((*([self.mesh_points] * self.eff_dim), 3))
 
     def populate_spin(self, filled_bands=None):
-        filled_bands = filled_bands if filled_bands else self.model.bands // 2
+        filled_bands = filled_bands if filled_bands else self.eff_bands // 2
         if (self.spin_evaluated and self.spin_evaluated == filled_bands) or self.S is None:
             return
         if not self.evaluated:
@@ -145,7 +145,7 @@ class EdgeSimulator(Simulator):
                 return fig
 
         else:
-            raise ValueError("Band plotting of models in %d-D is not supported" % self.model.dim)
+            raise ValueError("Band plotting of models in %d-D is not supported" % self.eff_dim)
 
     def in_gap_states(self, n_states=2, fermi=0.0):
         ids = np.argpartition(np.abs(self.band - fermi), n_states, axis=None)
