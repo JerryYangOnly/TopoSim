@@ -171,14 +171,12 @@ class Simulator:
             return self._chern_wcc(filled_bands, **kwargs)
 
     def _chern_hatsugai(self, filled_bands):
-        Q = 0.0
-        F = np.conj(self.states[:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, :-1, :, :filled_bands]
-        F = F @ (np.conj(self.states[1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, 1:, :, :filled_bands])
-        F = F @ (np.conj(self.states[1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, 1:, :, :filled_bands])
-        F = F @ (np.conj(self.states[:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, :-1, :, :filled_bands])
-        F = np.angle(np.linalg.det(F))
-        Q = np.sum(F) / 2.0 / np.pi
-        return Q
+        mat = np.conj(self.states[:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, :-1, :, :filled_bands]
+        mat = mat @ (np.conj(self.states[1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[1:, 1:, :, :filled_bands])
+        mat = mat @ (np.conj(self.states[1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, 1:, :, :filled_bands])
+        mat = mat @ (np.conj(self.states[:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[:-1, :-1, :, :filled_bands])
+        mat = np.angle(np.linalg.det(mat))
+        return np.sum(mat) / 2.0 / np.pi
 
     def _chern_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
         if (wl_density >= self.mesh_points - 1) or not self.evaluated or force_density:
@@ -290,31 +288,30 @@ class Simulator:
             self.populate_mesh()
 
         # Compute Berry flux for half of the Brillouin zone
-        Q = 0.0
+        flux = 0.0
         n = self.mesh_points // 2
-        F = np.conj(self.states[n:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, :-1, :, :filled_bands]
-        F = F @ (np.conj(self.states[n + 1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, 1:, :, :filled_bands])
-        F = F @ (np.conj(self.states[n + 1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, 1:, :, :filled_bands])
-        F = F @ (np.conj(self.states[n:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, :-1, :, :filled_bands])
-        F = -np.angle(np.linalg.det(F))
-        Q = np.sum(F)
+        mat = np.conj(self.states[n:-1, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, :-1, :, :filled_bands]
+        mat = mat @ (np.conj(self.states[n + 1:, :-1, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n + 1:, 1:, :, :filled_bands])
+        mat = mat @ (np.conj(self.states[n + 1:, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, 1:, :, :filled_bands])
+        mat = mat @ (np.conj(self.states[n:-1, 1:, :, :filled_bands]).transpose(0, 1, 3, 2) @ self.states[n:-1, :-1, :, :filled_bands])
+        mat = -np.angle(np.linalg.det(mat))
+        flux = np.sum(mat)
 
         # Compute integral of Berry connection about edge of effective Brillouin zone
         def eff_bz_loop(x):
-            v = 6 * np.pi
+            vel = 6 * np.pi
             if x <= 1 / 3:
-                return (np.pi, -np.pi + v * x)
-            elif x <= 1 / 2:
-                return (np.pi - v * (x - 1 / 3), np.pi)
-            elif x <= 5 / 6:
-                return (0, np.pi - v * (x - 1 / 2))
-            else:
-                return (v * (x - 5 / 6), -np.pi)
-        W = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
+                return (np.pi, -np.pi + vel * x)
+            if x <= 1 / 2:
+                return (np.pi - vel * (x - 1 / 3), np.pi)
+            if x <= 5 / 6:
+                return (0, np.pi - vel * (x - 1 / 2))
+            return (vel * (x - 5 / 6), -np.pi)
+
+        wilson = self.wilson_loop(eff_bz_loop, filled_bands=filled_bands)
         # print(np.angle(W))
-        W = np.angle(scipy.linalg.det(W))
-        
-        return ((W - Q) / 2 / np.pi) % 2
+        wilson = np.angle(scipy.linalg.det(wilson))
+        return ((wilson - flux) / 2 / np.pi) % 2
 
     def _z2_wcc(self, filled_bands, wl_density=100, axis=0, force_density=False):
         if self.mesh_points % 2 == 0 or (wl_density >= self.mesh_points // 2 + 1) or not self.evaluated or force_density:
@@ -412,18 +409,17 @@ class Simulator:
         return np.min(np.sqrt(np.sum(self.spin**2, axis=2)))
 
     def normalized_spin(self):
-        s = np.sqrt(np.sum(self.spin**2, axis=2).reshape((*([self.mesh_points] * self.model.dim), 1)))
-        s[s == 0] = np.finfo(np.float32).eps
-        return self.spin / s
+        mag = np.sqrt(np.sum(self.spin**2, axis=self.model.dim, keepdims=True))
+        mag[mag == 0] = np.finfo(np.float32).eps
+        return self.spin / mag
 
     def compute_skyrmion(self, filled_bands=None, method="hatsugai"):
         """S has shape (3, bands, bands).
         """
         if self.S is None:
-            return
+            raise ValueError("Spin operator is not set")
         if self.model.dim != 2:
-            print("Computation of skyrmion number is only supported in 2-D.")
-            return
+            raise ValueError("Computation of skyrmion number is only supported in 2-D.")
         self.populate_spin(filled_bands)
 
         spin = self.normalized_spin()
@@ -434,18 +430,18 @@ class Simulator:
             _, states = np.linalg.eigh(hamil)
             states[-1] = states[0]          # Gauge fixing
             states[:, -1] = states[:, 0]
-            Q = 0.0
-            F = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
-            F = F @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
-            F = F @ (np.conj(states[1:, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, 1:, :, :1])
-            F = F @ (np.conj(states[:-1, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, :-1, :, :1])
-            F = np.angle(np.linalg.det(F))
-            Q = np.sum(F) / 2.0 / np.pi
-            return Q
-        elif method == "integral":
-            return -np.sum(spin * np.cross(np.gradient(spin, axis=0), np.gradient(spin, axis=1))) / 4 / np.pi
-        else:
-            raise AttributeError("`method` %s is not available" % method)
+            mat = np.conj(states[:-1, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, :-1, :, :1]
+            mat = mat @ (np.conj(states[1:, :-1, :, :1]).transpose(0, 1, 3, 2) @ states[1:, 1:, :, :1])
+            mat = mat @ (np.conj(states[1:, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, 1:, :, :1])
+            mat = mat @ (np.conj(states[:-1, 1:, :, :1]).transpose(0, 1, 3, 2) @ states[:-1, :-1, :, :1])
+            mat = np.angle(np.linalg.det(mat))
+            return np.sum(mat) / 2.0 / np.pi
+
+        if method == "integral":
+            return -np.sum(spin * np.cross(np.gradient(spin, axis=0),
+                                           np.gradient(spin, axis=1)))/4/np.pi
+
+        raise AttributeError("`method` %s is not available" % method)
 
     def compute_skyrmion_z2(self, Ss, filled_bands=None, SOC=True):
         if self.model.dim != 2:

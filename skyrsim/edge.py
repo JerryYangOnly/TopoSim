@@ -80,9 +80,9 @@ class EdgeSimulator(Simulator):
         self.spin_evaluted = filled_bands
 
     def normalized_spin(self):
-        s = np.sqrt(np.sum(self.spin**2, axis=2, keepdims=True))
-        s[s == 0] = np.finfo(np.float32).eps
-        return self.spin / s
+        mag = np.sqrt(np.sum(self.spin**2, axis=self.eff_dim, keepdims=True))
+        mag[mag == 0] = np.finfo(np.float32).eps
+        return self.spin / mag
 
     def plot_band(self, band_hl=(), pi_ticks=True, close_fig=False, return_fig=False, save_fig=""):
         if not self.evaluated:
